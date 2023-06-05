@@ -1,6 +1,10 @@
-using QuadraticTeamDecisionSolver
-using Test
+include("testProblemUtils.jl")
 
-@testset "QuadraticTeamDecisionSolver.jl" begin
-    # Write your tests here.
+@testset "checkProblem tests" begin
+    test_checkProblem()
+    test_checkSample()
+    test_checkData()
+    test_checkGamma()
+    test_loss()
+    test_risk()
 end
