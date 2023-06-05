@@ -1,7 +1,5 @@
 module QuadraticTeamDecisionSolver
 
-using IterTools, LinearAlgebra
-
 include("types.jl")
 export QuadTeamProblem, Sample
 

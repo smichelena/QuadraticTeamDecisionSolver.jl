@@ -123,6 +123,7 @@ function checkGamma(P::QuadTeamProblem, γ::Vector{<:Function})
 	return γ
 end
 
+using IterTools, LinearAlgebra
 
 """
 	loss(s::Sample, γ::Vector{<:Function})
