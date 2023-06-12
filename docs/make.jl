@@ -1,12 +1,14 @@
-using Documenter
+using Documenter ,QuadraticTeamDecisionSolver
 
-push!(LOAD_PATH, "../src/")
+#push!(LOAD_PATH, "../src/")
 
 makedocs(
     sitename = "QuadraticTeamDecisionSolver",
     pages = [
         "Home" => "index.md",
-        "General Utility Functions" => "problemUtils.md"
+        "General Utility Functions" => "problemUtils.md",
+        "Fixed Point Solvers" => "fixedPointSolvers.md",
+        "Kernel Tools" => "kernelTools.md"
     ],
 )
 

@@ -30,12 +30,14 @@ end
 
 Check the consistency and correctness of a `Sample` object `s` with respect to a `QuadTeamProblem` `p`.
 
+Additionally checks samples of ``\\mathbf{R}(\\mathbf{X})`` are Hermitian and positive definite.
+
 # Arguments
 - `p::QuadTeamProblem`: The QuadTeamProblem object representing the problem specification.
 - `s::Sample`: The Sample object to be checked.
 
 # Errors
-- `AssertionError`: Throws an error if any inconsistency or mismatch is found in the sample.
+- `AssertionError`: Throws an error if any inconsistency or mismatch is found in the sample, or if R isn't positive definite 
 
 # Example
 ```julia
@@ -59,12 +61,15 @@ function checkSample(p::QuadTeamProblem, s::Sample)
 
 	totalSize = sum(p.a)
 
-	#check R 
+	#check R has correct dimensions
 	@assert size(s.R)[1] == totalSize && size(s.R)[2] == totalSize "Sample of R(X) has wrong dimensions! \n" *
 																   "Row dimension is $(size(s.R)[1]) \n" *
 																   "Column dimension is $(size(s.R)[2]) \n" *
 																   "Both should be $(totalSize) !"
 
+	#check R is positive definite and Hermitian/Symettric
+	@assert eigvals(s.R) .|> (x -> isapprox(imag(x), 0) ? real(x) : -1) |>
+			vec -> all(x -> x > 0, vec) "R(X) is not positive definite!"
 
 	#check r
 	@assert size(s.r)[1] == totalSize "sample of r(X) has wrong dimensions! \n " *
@@ -157,4 +162,57 @@ Compute the risk function for a given vector of Samples `S` using a vector of fu
 """
 function risk(S::Vector{<:Sample}, γ::Vector{<:Function})
 	return (S .|> (s -> loss(s, γ)) |> sum) / length(S)
+end
+
+"""
+	splitSampleIntoBlocks(p::QuadTeamProblem, s::Sample)
+
+Split a sample `s` into blocks based on the dimensions defined in the `QuadTeamProblem` `p`.
+
+# Arguments
+- `p::QuadTeamProblem`: A `QuadTeamProblem` object defining the dimensions of the blocks.
+- `s::Sample`: A `Sample` object to be split into blocks.
+
+# Returns
+- `R_blocks::Vector{SubArray}`: An array of subarrays containing the blocks of `s.R` based on the block dimensions defined in `p`.
+- `r_blocks::Vector{SubArray}`: An array of subarrays containing the blocks of `s.r` based on the block dimensions defined in `p`.
+
+"""
+function splitSampleIntoBlocks(p::QuadTeamProblem, s::Sample)
+	beginnings = accumulate(+, vcat(1, p.a)[1:end-1])
+	endings = accumulate(+, p.a)
+	R_blocks = [
+		s.R[a:b, c:d] for (a, b) in zip(beginnings, endings),
+		(c, d) in zip(beginnings, endings)
+	]
+	r_blocks = [s.r[a:b] for (a, b) in zip(beginnings, endings)]
+	return R_blocks, r_blocks
+end
+
+"""
+	splitDataSetIntoBlocks(p::QuadTeamProblem, S::Vector{<:Sample})
+
+Split a vector of samples `S` into blocks based on the dimensions defined in the `QuadTeamProblem` `p`.
+
+# Arguments
+- `p::QuadTeamProblem`: A `QuadTeamProblem` object defining the dimensions of the blocks.
+- `S::Vector{<:Sample}`: A vector of `Sample` objects to be split into blocks.
+
+# Returns
+- `Y`: vector of length `N` (number of agents) of vectors `Y[i]` of length `m` (number of samples).
+Each entry of `Y` is the vector of measurement vectors that correspond to the agent `i`.
+- `R_blocks`: vector of length `N` (number of agents) of vectors `R` of length `m` (number of samples). 
+Each entry of `R`, `R[i]` is a vector of the blocks of `R` that correspond to the agent `i` 
+- `r_blocks`: vector of length `N` (number of agents) of vectors `r` of length `m` (nummber of samples).
+Each entry of `r`, `r[i]` is a vector of the block of `r` that corresponds to the agent `i`
+
+"""
+function splitDataSetIntoBlocks(p::QuadTeamProblem, S::Vector{<:Sample})
+	split = S .|> s -> splitSampleIntoBlocks(p, s)
+	Y = [s.Y for s in S]
+	#vector of tuples to tuple of vectors 
+	splitR = [split[i][1] for i in 1:length(S)] 
+	splitr = [split[i][2] for i in 1:length(S)]
+	#reorganize into samples per agent
+	return [[y[i] for y in Y] for i in 1:p.N], [[R[i,:] for R in splitR] for i in 1:p.N], [[r[i] for r in splitr] for i in 1:p.N]
 end

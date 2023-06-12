@@ -2,8 +2,8 @@
 
 ## Types
 ```@docs
-QuadTeamProblem{T <: Number}
-Sample{T <: Number}
+QuadTeamProblem{T<:Number}
+Sample{T<:Number}
 ```
 
 ## Functions
@@ -15,4 +15,6 @@ checkGamma(P::QuadTeamProblem, γ::Vector{<:Function})
 checkData(p::QuadTeamProblem, S::Vector{<:Sample})
 loss(s::Sample, γ::Vector{<:Function})
 risk(S::Vector{<:Sample}, γ::Vector{<:Function})
+splitSampleIntoBlocks(p::QuadTeamProblem, s::Sample)
+splitDataSetIntoBlocks(p::QuadTeamProblem, S::Vector{<:Sample})
 ```
