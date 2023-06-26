@@ -31,11 +31,8 @@ function generateCrossSamples(
 	return [sum([Rₛ[j] * γ[j](y) for j in crossRange]) for (Rₛ, y) in zip(R, Y)]
 end
 
-
-using ProgressLogging
-
 """
-	parallelIterationSolver(
+	naiveIterativeSolver(
 		p::QuadTeamProblem,
 		S::Vector{<:Sample},
 		functionClass::Vector{<:Function},
@@ -46,7 +43,8 @@ using ProgressLogging
 		preprocessData = true,
 	)
 
-Approximate the solution to a quadratic team decision problem using a parallel iteration scheme.
+Approximate the solution to a quadratic team decision problem using a sequential iteration scheme.
+Should work for any function class parametrized by some parameter ``\\theta``.
 
 # Arguments
 - `p::QuadTeamProblem`: A `QuadTeamProblem` object defining the problem's specifications.
@@ -64,7 +62,7 @@ Approximate the solution to a quadratic team decision problem using a parallel i
 - `empiricalCost::Vector{Float64}`: A vector containing the empirical cost at each iteration.
 
 """
-function parallelIterationSolver(
+function naiveIterativeSolver(
 	p::QuadTeamProblem,
 	S::Vector{<:Sample},
 	functionClass::Vector{<:Function},
@@ -92,9 +90,9 @@ function parallelIterationSolver(
 	#initialize convergence tracking 
 	norms = [Vector{Float64}() for _ in 1:p.N]
 	empiricalCost = Vector{Float64}()
-	#append!(empiricalCost, risk(S, γ))
+	append!(empiricalCost, risk(S, γ))
 
-	@progress for k in 1:iterations  #fixed point iterations
+	for k in 1:iterations  #fixed point iterations
 
 		for i in 1:p.N #solve for each agent
 
@@ -119,6 +117,358 @@ function parallelIterationSolver(
 	end
 
 	return weights, norms, empiricalCost
+
+end
+
+function assembleCrossBlock(
+	T::Type,
+	m::Int,
+	Yᵢᵃ::Vector{<:Vector},
+	Yᵢᵇ::Vector{<:Vector},
+	Yⱼᵃ::Vector{<:Vector},
+	Yⱼᵇ::Vector{<:Vector},
+	Rᵢⱼ::Vector{<:Matrix},
+	kʲ::Function,
+	conditionalMean::Function,
+)
+
+	Eᵢⱼ = zeros(T, m, m)
+
+	for (k, yᵢ) in zip(1:m, Yᵢᵇ)
+		for (l, yⱼ) in zip(1:m, Yⱼᵇ)
+			Eᵢⱼ[l, k] = conditionalMean(
+				[R * kʲ(y, yⱼ) for (R, y) in zip(Rᵢⱼ, Yⱼᵃ)],
+				Yᵢᵃ,
+				yᵢ,
+			)
+		end
+	end
+
+	return Eᵢⱼ
+
+end
+
+function assembleDiagonalBlock(
+	T::Type,
+	m::Int,
+	Rᵢᵢ::Vector{<:Matrix},
+	Yᵢᵃ::Vector{<:Vector},
+	Yᵢᵇ::Vector{<:Vector},
+	conditionalMean::Function,
+)
+
+	Eᵢᵢ = zeros(T, m)
+
+	for (k, yᵢ) in zip(1:m, Yᵢᵇ)
+		Eᵢᵢ[k] = conditionalMean(Rᵢᵢ, Yᵢᵃ, yᵢ)
+	end
+
+	return Eᵢᵢ
+
+end
+
+function assembleAffineBlock(
+	T::Type,
+	m::Int,
+	rᵢ::Vector{<:Vector},
+	Yᵢᵃ::Vector{<:Vector},
+	Yᵢᵇ::Vector{<:Vector},
+	conditionalMean::Function,
+)
+
+	r = zeros(T, m)
+
+	for (k, yᵢ) in zip(1:m, Yᵢᵇ)
+		r[k] = conditionalMean(rᵢ, Yᵢᵃ, yᵢ)
+	end
+
+	return r
+
+end
+
+"""
+	assembleSystem(
+		T::Type, 
+		i::Int, 
+		m::Int, 
+		N::Int, 
+		Rᵢ::Vector{<:Vector{<:Matrix}}, 
+		rᵢ::Vector{<:Vector}, 
+		Yᵃ::Vector{<:Vector{<:Vector}}, 
+		Yᵇ::Vector{<:Vector{<:Vector}}, 
+		kernels::Vector{<:Function}, 
+		conditionalMean::Function
+	)
+
+Assembles and returns various blocks of a system.
+
+# Arguments
+- `T::Type`: The type of the system.
+- `i::Int`: The index of the current block.
+- `m::Int`: The size of the system.
+- `N::Int`: The total number of blocks.
+- `Rᵢ::Vector{<:Vector{<:Matrix}}`: A vector of matrices.
+- `rᵢ::Vector{<:Vector}`: A vector of vectors.
+- `Yᵃ::Vector{<:Vector{<:Vector}}`: A vector of 3D arrays.
+- `Yᵇ::Vector{<:Vector{<:Vector}}`: A vector of 3D arrays.
+- `kernels::Vector{<:Function}`: A vector of kernel functions.
+- `conditionalMean::Function`: The conditional mean function.
+
+# Returns
+- `Kᵢ`: The gramian matrix calculated using the kernel function `kernels[i]` and `Yᵇ[i]`.
+- `Eᵢᵢ`: The diagonal block assembled using the `assembleDiagonalBlock` function.
+- `Eᵢ`: An array of cross blocks assembled using the `assembleCrossBlock` function.
+- `rᵢ`: The affine block assembled using the `assembleAffineBlock` function.
+"""
+function assembleSystem(
+	T::Type,
+	i::Int,
+	m::Int,
+	N::Int,
+	Rᵢ::Vector{<:Vector{<:Matrix}},
+	rᵢ::Vector{<:Vector},
+	Yᵃ::Vector{<:Vector{<:Vector}},
+	Yᵇ::Vector{<:Vector{<:Vector}},
+	kernels::Vector{<:Function},
+	conditionalMean::Function,
+)
+
+	Kᵢ = gramian(kernels[i], Yᵇ[i])
+
+	Eᵢᵢ = assembleDiagonalBlock(
+		T,
+		m,
+		[R[i] for R in Rᵢ],
+		Yᵃ[i],
+		Yᵇ[i],
+		conditionalMean,
+	)
+
+	crossRange = if i == 1
+		2:N
+	elseif i == N
+		1:(N-1)
+	else
+		vcat(1:(i-1), (i+1):N)
+	end
+
+	Eᵢ = []
+
+	for j in crossRange
+		append!(Eᵢ,
+			[
+				assembleCrossBlock(
+					T,
+					m,
+					Yᵃ[i],
+					Yᵇ[i],
+					Yᵃ[j],
+					Yᵇ[j],
+					[R[j] for R in Rᵢ],
+					kernels[j],
+					conditionalMean,
+				),
+			])
+	end
+
+	rᵢ = assembleAffineBlock(T, m, rᵢ, Yᵃ[i], Yᵇ[i], conditionalMean)
+
+	return Kᵢ, Eᵢᵢ, Eᵢ, rᵢ
+
+end
+
+"""
+	empiricalJacobiSolver!(
+		p::QuadTeamProblem,
+		w::Vector{<:Vector},
+		Yᵃ::Vector{<:Vector{<:Vector}},
+		Yᵇ::Vector{<:Vector{<:Vector}},
+		Rblocks::Vector{<:Vector{<:Vector{<:Matrix}}},
+		rblocks::Vector{<:Vector{<:Vector}},
+		kernels::Vector{<:Function},
+		conditionalMean::Function;
+		iterations = 5,
+		λ = 1,
+	)
+
+Approximate the solution to a quadratic team decision problem using a parallel iteration scheme. 
+Restricts the operator Jacobi iteration to a finite dimensional reproducing kernel Hilbert space.
+
+# Parameters:
+- `p: QuadTeamProblem` - The QuadTeamProblem object.
+- `w: Vector{<:Vector}` - The weight vector. Must be pre-initialized and will be modified in place.
+- `Yᵃ: Vector{<:Vector{<:Vector}}` - The vector of agent samples used to generate conditional mean approximations.
+- `Yᵇ: Vector{<:Vector{<:Vector}}` - The vector of agent samples used to generate the finite-dimensional reproducing kernel Hilbert space, which serves as our ansatz space.
+- `Rblocks: Vector{<:Vector{<:Vector{<:Matrix}}}` - The vector of matrix samples corresponding to each agent.
+- `rblocks: Vector{<:Vector{<:Vector}}` - The vector of samples of ``\\mathbf{r}`` corresponding to each agent.
+- `kernels: Vector{<:Function} `- The kernel functions. (Vector as it may differ per agent).
+- `conditionalMean: Function `- Function to approximate conditional means.
+
+# Keyword Arguments:
+- `iterations: Int` - The number of iterations for the empirical Jacobi method. Default is 5.
+- `λ: Float` - The regularization parameter for kernel gramian inversion. Default is 1.
+
+# Returns:
+- `w: Vector{<:Vector}` - The updated weight vector.
+"""
+function empiricalJacobiSolver!(
+	p::QuadTeamProblem,
+	w::Vector{<:Vector},
+	Yᵃ::Vector{<:Vector{<:Vector}},
+	Yᵇ::Vector{<:Vector{<:Vector}},
+	Rblocks::Vector{<:Vector{<:Vector{<:Matrix}}},
+	rblocks::Vector{<:Vector{<:Vector}},
+	kernels::Vector{<:Function},
+	conditionalMean::Function;
+	iterations = 5,
+	λ = 1,
+)
+	K = []
+	Eₛ = []
+	Eᵣ = []
+	rₜ = [] #dont like the subscript
+
+	m = length(Yᵇ[1])
+
+	for i in 1:p.N
+		k, eₛ, eᵣ, r = assembleSystem(
+			p.T,
+			i,
+			m,
+			p.N,
+			Rblocks[i],
+			rblocks[i],
+			Yᵃ,
+			Yᵇ,
+			kernels,
+			conditionalMean,
+		)
+		append!(K, [k])
+		append!(Eₛ, [eₛ])
+		append!(Eᵣ, [eᵣ])
+		append!(rₜ, [r])
+	end
+
+	for _ in 1:iterations
+
+		E = []
+
+		for i in 1:p.N
+			crossRange = if i == 1
+				2:p.N
+			elseif i == p.N
+				1:(p.N-1)
+			else
+				vcat(1:(i-1), (i+1):p.N)
+			end
+
+			append!(
+				E,
+				[sum([E * w[j][end] for (E, j) in zip(Eᵣ[i], crossRange)])],
+			)
+		end
+
+		for i in 1:p.N
+			append!(w[i], [(K[i] + λ * I) \ -(Eₛ[i] .\ (E[i] + rₜ[i]))])
+		end
+
+	end
+
+	return w
+
+end
+
+"""
+	empiricalAlternatingSolver!(
+		p::QuadTeamProblem,
+		w::Vector{<:Vector},
+		Yᵃ::Vector{<:Vector{<:Vector}},
+		Yᵇ::Vector{<:Vector{<:Vector}},
+		Rblocks::Vector{<:Vector{<:Vector{<:Matrix}}},
+		rblocks::Vector{<:Vector{<:Vector}},
+		kernels::Vector{<:Function},
+		conditionalMean::Function;
+		iterations = 5,
+		λ = 1,
+	)
+
+Approximate the solution to a quadratic team decision problem using a parallel iteration scheme. 
+Restricts the operator alternating iteration to a finite dimensional kernel basis.
+
+# Parameters:
+- `p: QuadTeamProblem` - The QuadTeamProblem object.
+- `w: Vector{<:Vector}` - The weight vector. Must be pre-initialized and will be modified in place.
+- `Yᵃ: Vector{<:Vector{<:Vector}}` - The vector of agent samples used to generate conditional mean approximations.
+- `Yᵇ: Vector{<:Vector{<:Vector}}` - The vector of agent samples used to generate the finite-dimensional reproducing kernel Hilbert space, which serves as our ansatz space.
+- `Rblocks: Vector{<:Vector{<:Vector{<:Matrix}}}` - The vector of matrix samples corresponding to each agent.
+- `rblocks: Vector{<:Vector{<:Vector}}` - The vector of samples of ``\\mathbf{r}`` corresponding to each agent.
+- `kernels: Vector{<:Function} `- The kernel functions. (Vector as it may differ per agent).
+- `conditionalMean: Function `- Function to approximate conditional means.
+
+# Keyword Arguments:
+- `iterations: Int` - The number of iterations for the empirical Jacobi method. Default is 5.
+- `λ: Float` - The regularization parameter for kernel gramian inversion. Default is 1.
+
+# Returns:
+- `w: Vector{<:Vector}` - The updated weight vector.
+
+"""
+function empiricalAlternatingSolver!(
+	p::QuadTeamProblem,
+	w::Vector{<:Vector},
+	Yᵃ::Vector{<:Vector{<:Vector}},
+	Yᵇ::Vector{<:Vector{<:Vector}},
+	Rblocks::Vector{<:Vector{<:Vector{<:Matrix}}},
+	rblocks::Vector{<:Vector{<:Vector}},
+	kernels::Vector{<:Function},
+	conditionalMean::Function;
+	iterations = 5,
+	λ = 1,
+)
+	K = []
+	Eₛ = []
+	Eᵣ = []
+	rₜ = [] #dont like the subscript
+
+	m = length(Yᵇ[1])
+
+	for i in 1:p.N
+		k, eₛ, eᵣ, r = assembleSystem(
+			p.T,
+			i,
+			m,
+			p.N,
+			Rblocks[i],
+			rblocks[i],
+			Yᵃ,
+			Yᵇ,
+			kernels,
+			conditionalMean,
+		)
+		append!(K, [k])
+		append!(Eₛ, [eₛ])
+		append!(Eᵣ, [eᵣ])
+		append!(rₜ, [r])
+	end
+
+
+	for _ in 1:iterations
+		for i in 1:p.N
+			crossRange = if i == 1
+				2:p.N
+			elseif i == p.N
+				1:(p.N-1)
+			else
+				vcat(1:(i-1), (i+1):p.N)
+			end
+
+			E = sum([E * w[j][end] for (E, j) in zip(Eᵣ[i], crossRange)])
+
+			append!(w[i], [(K[i] + λ * I) \ -(Eₛ[i] .\ (E + rₜ[i]))])
+		end
+	end
+
+	return w
 
 end
 
@@ -165,8 +515,6 @@ function GeneralOutputMap(
 	crossOutput = Y .|> y -> conditionalMean(crossSamples, Y, y)
 	Routput = Y .|> y -> conditionalMean(squareBlocks, Y, y)
 	rOutput = Y .|> y -> conditionalMean(r, Y, y)
-
-	#if output is not scalar valued then division becomes matrix inversion
-	return (ndims(crossOutput[1]) == 0) ? (crossOutput + rOutput) ./ Routput :
-		   Routput .\ (crossOutput + rOutput)
+	 
+	return -Routput .\ (crossOutput + rOutput)
 end
