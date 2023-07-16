@@ -216,3 +216,23 @@ function splitDataSetIntoBlocks(p::QuadTeamProblem, S::Vector{<:Sample})
 	#reorganize into samples per agent
 	return [[y[i] for y in Y] for i in 1:p.N], [[R[i,:] for R in splitR] for i in 1:p.N], [[r[i] for r in splitr] for i in 1:p.N]
 end
+
+function uloss(u::Vector, R::Matrix, r::Vector, c::Number)
+	return real(dot(u, R * u) + 2 * real(dot(u, r)) + c)
+end
+
+function urisk(Urange::Vector{<:Vector}, Rrange::Vector{<:Matrix}, rrange::Vector{<:Vector}, crange::Vector{<:Number})
+    return sum([uloss(u, R, r, c) for (u, R, r, c) in zip(Urange, Rrange, rrange, crange)])/length(Urange)
+end
+
+function reformatData(N, m, iterations, w, R, r)
+
+    Rs = [vcat([hcat([R[i,j][l] for i in 1:N]...) for j in 1:N]...) for l in 1:m]
+
+    rs = [vcat([r[i][l] for i in 1:N]...) for l in 1:m]
+
+    ws = [[vcat([w[i][k][l] for i in 1:N]...) for l in 1:m] for k in 1:iterations]
+    
+    return ws, Rs, rs
+
+end
