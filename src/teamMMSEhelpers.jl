@@ -43,8 +43,6 @@ function generateTeamMMSEsamples(p::QuadTeamProblem, t::teamMMSEproblem, m::Int)
 		r[i] = (H[i] .|> h -> h').*[e for _ in 1:m] 
 	end
 
-	c = 1.0 + 0.0im
-
-	return Y, R, r, c
+	return Y, R, r
 
 end
