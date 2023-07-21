@@ -47,14 +47,13 @@ function empiricalJacobiSolver!(
 	w::Vector{<:Vector},
 	Y::Vector{<:Vector},
 	R::Matrix{<:Vector},
-	r::Vector{<:Vector},
-	conditionalMean::Function;
+	r::Vector{<:Vector};
 	iterations = 5,
+	h = 1.0,
+	λ = 0.1
 )
 
-	E, hatr = assembleSystem(p.N, Y, R, r, conditionalMean)
-
-	for k in 1:iterations 
+	for _ in 1:iterations 
 
 		temp = []
 
@@ -68,15 +67,22 @@ function empiricalJacobiSolver!(
 				vcat(1:(i-1), (i+1):p.N)
 			end
 
-			crossSamples(y) = sum([conditionalMean(R[i, j] .* w[j][end] , Y[i], y) for j in crossRange])
+			S = zeros(ComplexF64, length(r[1])) 
+			for j in crossRange
+				S += R[i, j] .* w[j][end]
+			end
 
-			crossTerm = crossSamples.(Y[i])
+			kernel(x,y) = exponentialKernel(x, y, h=h) 
 
-			append!(temp, [crossTerm])
+			crossWeights = kernelInterpolation(kernel, S, Y[i], λ=λ)
+
+			crossSamples = Y[i] .|> y -> kernelFunction(kernel, crossWeights, Y[i], y)
+
+			append!(temp, [crossSamples])
 		end
 
 		for i in 1:p.N
-			append!(w[i], [-E[i] .\ (temp[i] .+ hatr[i])])
+			append!(w[i], [-R[i,i] .\ (temp[i] .+ r[i])])
 		end
 
 	end

@@ -14,7 +14,7 @@ that is, ``\\exp \\left( - \\frac{|x - y|^2}{h} \\right)`` where ``| \\ \\cdot \
 on the original sample space.
 
 """
-function exponentialKernel(x::Vector, y::Vector; h = 1)
+function exponentialKernel(x::Any, y::Any; h = 1)
 	return exp(-real((norm(x - y)^2) / h))
 end
 
@@ -28,8 +28,8 @@ Compute the gramian of a kernel ``K`` over the samples ``\\mathbf{Y} \\subset \\
 - `Y::Vector{<:Vector}`: The samples over which the gramian is to be constructed.
 
 """
-function gramian(kernel::Function, Y::Vector{<:Vector})
-	return [kernel(x, y) for x in Y, y in Y]
+function gramian(kernel::Function, X::Vector)
+	return [kernel(x, y) for x in X, y in X]
 end
 
 """
@@ -66,8 +66,8 @@ Evaluates a kernel function of the form ``f(\\mathbf{y}) = \\sum_{l=1}^m \\alpha
 function kernelFunction(
 	kernel::Function,
 	weights::Vector,
-	Y::Vector{<:Vector},
-	x::Vector,
+	Y::Vector,
+	x::Any,
 )
 	return dot([kernel(x, y) for y in Y], weights)
 end
@@ -88,7 +88,7 @@ end
 	kernelInterpolation(
 		kernel::Function,
 		Y::Vector,
-		O::Vector;
+		X::Vector;
 		λ = 0.5,
 	)
 
@@ -104,8 +104,8 @@ Where ``\\mathcal{H}_k`` is a Reproducing Kernel Hilbert Space with kernel ``k``
 
 # Arguments:
 - `kernel::Function`: The kernel function that corresponds to ``\\mathcal{H}_k``.
-- `Y::Vector`: Vector of samples in input space ``\\mathcal{Y}``.
-- `O::Vector`: Vector of samples in output space ``\\mathcal{O}``.
+- `X::Vector`: Vector of samples in input space ``\\mathcal{X}``.
+- `Y::Vector`: Vector of samples in output space ``\\mathcal{Y}``.
 - `λ = 0.5`: Regularization constant for ridge regression.
 
 Note that `Y::Vector` and `O::Vector` must have the same length `m`.
@@ -114,8 +114,8 @@ Note that `Y::Vector` and `O::Vector` must have the same length `m`.
 function kernelInterpolation(
     kernel::Function,
 	Y::Vector,
-	O::Vector;
+	X::Vector;
 	λ = 0.5,
 )
-	return (gramian(kernel, Y) + λ * I) \ O
+	return (gramian(kernel, X) + λ * I) \ Y
 end

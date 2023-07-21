@@ -4,7 +4,7 @@ include("types.jl")
 export QuadTeamProblem, Sample
 
 include("problemUtils.jl")
-export checkProblem, checkSample, checkGamma, checkData, loss, risk, splitSampleIntoBlocks, splitDataSetIntoBlocks, urisk, reformatData
+export checkProblem, checkSample, checkGamma, checkData, loss, risk, splitSampleIntoBlocks, splitDataSetIntoBlocks, urisk, reformatR, reformatW, reformatr
 
 include("fixedPointSolvers.jl")
 export empiricalAlternatingSolver!, empiricalJacobiSolver!
