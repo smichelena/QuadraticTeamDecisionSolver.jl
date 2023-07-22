@@ -1,41 +1,13 @@
-"""
-	assembleSystem(
-		N::Int,
-		Y::Vector{<:Vector},
-		R::Matrix{<:Vector},
-		r::Vector{<:Vector},
-		conditionalMean::Function,
-	)
-
-Assembles and returns various blocks of a system.
-
-"""
-function assembleSystem(
-	N::Int,
-	Y::Vector{<:Vector},
-	R::Matrix{<:Vector},
-	r::Vector{<:Vector},
-	conditionalMean::Function,
-)
-	E = Vector{Vector}(undef, N)
-	hatr = Vector{Vector}(undef, N)
-	for i in 1:N
-		E[i] = [conditionalMean(R[i, i], Y[i], y) for y in Y[i]]
-		hatr[i] = [conditionalMean(r[i], Y[i], y) for y in Y[i]]
-	end
-
-	return E, hatr
-
-end
+using Distributed
 
 """
 	empiricalJacobiSolver!(
 		p::QuadTeamProblem,
-		w::Vector{<:Vector},
+		U::Vector{<:Vector},
 		Y::Vector{<:Vector},
 		R::Matrix{<:Vector},
-		r::Vector{<:Vector},
-		conditionalMean::Function;
+		r::Vector{<:Vector}
+		regression::Function;
 		iterations = 5,
 	)
 
@@ -43,100 +15,227 @@ Approximately sample the solution to a quadratic team decision problem using a J
 
 """
 function empiricalJacobiSolver!(
-	p::QuadTeamProblem,
-	w::Vector{<:Vector},
-	Y::Vector{<:Vector},
-	R::Matrix{<:Vector},
-	r::Vector{<:Vector};
-	iterations = 5,
-	h = 1.0,
-	λ = 0.1
+    p::QuadTeamProblem,
+    U::Vector{<:Vector},
+    Y::Vector{<:Vector},
+    R::Matrix{<:Vector},
+    r::Vector{<:Vector},
+    regression::Function,
+    regressor::Function;
+    iterations = 5,
+)
+    wE = [regression(R[i, i], Y[i]) for i in 1:p.N]
+    wr = [regression(r[i], Y[i]) for i in 1:p.N]
+    E = [Y[i] .|> x -> regressor(wE[i], Y[i], x) for i ∈ 1:p.N]
+    hatr = [Y[i] .|> x -> regressor(wr[i], Y[i], x) for i ∈ 1:p.N]
+
+    for _ ∈ 1:iterations
+
+        temp = []
+
+        for i ∈ 1:p.N
+
+            crossRange = if i == 1
+                2:p.N
+            elseif i == p.N
+                1:(p.N-1)
+            else
+                vcat(1:(i-1), (i+1):p.N)
+            end
+
+            S = zeros(p.T, length(r[1]))
+            for j in crossRange
+                S += R[i, j] .* U[j][end]
+            end
+
+            crossWeights = regression(S, Y[i])
+
+            crossSamples = Y[i] .|> x -> regressor(crossWeights, Y[i], x)
+
+            append!(temp, [crossSamples])
+        end
+
+        for i ∈ 1:p.N
+            append!(U[i], [-E[i] .\ (temp[i] .+ hatr[i])])
+        end
+
+    end
+
+    return U
+
+end
+
+"""
+	jacobiPrecodingSolver!(
+		p::QuadTeamProblem,
+		U::Vector{<:Vector},
+		Y::Vector{<:Vector},
+		R::Matrix{<:Vector},
+		r::Vector{<:Vector}
+		regression::Function;
+		iterations = 5,
+	)
+
+Approximately sample the solution to a quadratic team decision problem using a Jacobi iteration scheme.
+
+"""
+function jacobiPrecodingSolver!(
+    p::QuadTeamProblem,
+    U::Vector{<:Vector},
+    Y::Vector{<:Vector},
+    R::Matrix{<:Vector},
+    r::Vector{<:Vector},
+    regression::Function,
+    regressor::Function;
+    iterations = 5,
+)
+    for _ ∈ 1:iterations
+
+        temp = []
+
+        @distributed for i ∈ 1:p.N
+
+            crossRange = if i == 1
+                2:p.N
+            elseif i == p.N
+                1:(p.N-1)
+            else
+                vcat(1:(i-1), (i+1):p.N)
+            end
+
+            S = zeros(p.T, length(r[1]))
+            for j in crossRange
+                S += R[i, j] .* U[j][end]
+            end
+
+            crossWeights = regression(S, Y[i])
+
+            crossSamples = Y[i] .|> x -> regressor(crossWeights, Y[i], x)
+
+            append!(temp, [crossSamples])
+        end
+
+        for i ∈ 1:p.N
+            append!(U[i], [-R[i, i] .\ (temp[i] .+ r[i])])
+        end
+
+    end
+
+    return U
+
+end
+
+"""
+    empiricalAlternatingSolver!(
+		p::QuadTeamProblem,
+		U::Vector{<:Vector},
+		Y::Vector{<:Vector},
+		R::Matrix{<:Vector},
+		r::Vector{<:Vector}
+		regression::Function;
+		iterations = 5,
+	)
+
+Approximately sample the solution to a quadratic team decision problem using a Jacobi iteration scheme.
+
+"""
+function empiricalAlternatingSolver!(
+    p::QuadTeamProblem,
+    U::Vector{<:Vector},
+    Y::Vector{<:Vector},
+    R::Matrix{<:Vector},
+    r::Vector{<:Vector},
+    regression::Function,
+    regressor::Function;
+    iterations = 5,
 )
 
-	for _ in 1:iterations 
+    wE = [regression(R[i, i], Y[i]) for i in 1:p.N]
+    wr = [regression(r[i], Y[i]) for i in 1:p.N]
+    E = [Y[i] .|> x -> regressor(wE[i], Y[i], x) for i ∈ 1:p.N]
+    hatr = [Y[i] .|> x -> regressor(wr[i], Y[i], x) for i ∈ 1:p.N]
 
-		temp = []
+    for _ ∈ 1:iterations
 
-		for i in 1:p.N
+        for i ∈ 1:p.N
 
-			crossRange = if i == 1
-				2:p.N
-			elseif i == p.N
-				1:(p.N-1)
-			else
-				vcat(1:(i-1), (i+1):p.N)
-			end
+            crossRange = if i == 1
+                2:p.N
+            elseif i == p.N
+                1:(p.N-1)
+            else
+                vcat(1:(i-1), (i+1):p.N)
+            end
 
-			S = zeros(ComplexF64, length(r[1])) 
-			for j in crossRange
-				S += R[i, j] .* w[j][end]
-			end
+            S = zeros(p.T, length(r[1]))
+            for j in crossRange
+                S += R[i, j] .* U[j][end]
+            end
 
-			kernel(x,y) = exponentialKernel(x, y, h=h) 
+            crossWeights = regression(S, Y[i])
 
-			crossWeights = kernelInterpolation(kernel, S, Y[i], λ=λ)
+            crossSamples = Y[i] .|> x -> regressor(crossWeights, Y[i], x)
 
-			crossSamples = Y[i] .|> y -> kernelFunction(kernel, crossWeights, Y[i], y)
+            append!(U[i], [-E[i] .\ (crossSamples .+ hatr[i])])
+        end
 
-			append!(temp, [crossSamples])
-		end
+    end
 
-		for i in 1:p.N
-			append!(w[i], [-R[i,i] .\ (temp[i] .+ r[i])])
-		end
-
-	end
-
-	return w
+    return U
 
 end
 
 
 """
-	empiricalJacobiSolver!(
+	alternatingPrecodingSolver!(
 		p::QuadTeamProblem,
-		w::Vector{<:Vector},
+		U::Vector{<:Vector},
 		Y::Vector{<:Vector},
 		R::Matrix{<:Vector},
-		r::Vector{<:Vector},
-		conditionalMean::Function;
+		r::Vector{<:Vector}
+		regression::Function;
 		iterations = 5,
 	)
 
-Approximately sample the solution to a quadratic team decision problem using an alternating iteration scheme.
+Approximately sample the solution to a quadratic team decision problem using a Jacobi iteration scheme.
 
 """
-function empiricalAlternatingSolver!(
-	p::QuadTeamProblem,
-	w::Vector{<:Vector},
-	Y::Vector{<:Vector},
-	R::Matrix{<:Vector},
-	r::Vector{<:Vector},
-	conditionalMean::Function;
-	iterations = 5,
+function alternatingPrecodingSolver!(
+    p::QuadTeamProblem,
+    U::Vector{<:Vector},
+    Y::Vector{<:Vector},
+    R::Matrix{<:Vector},
+    r::Vector{<:Vector},
+    regression::Function,
+    regressor::Function;
+    iterations = 5,
 )
+    for _ ∈ 1:iterations
 
-	E, hatr = assembleSystem(p.N, Y, R, r, conditionalMean)
+        for i ∈ 1:p.N
 
-	for k in 1:iterations 
+            crossRange = if i == 1
+                2:p.N
+            elseif i == p.N
+                1:(p.N-1)
+            else
+                vcat(1:(i-1), (i+1):p.N)
+            end
 
-		for i in 1:p.N
+            S = zeros(p.T, length(r[1]))
+            for j in crossRange
+                S += R[i, j] .* U[j][end]
+            end
 
-			crossRange = if i == 1
-				2:p.N
-			elseif i == p.N
-				1:(p.N-1)
-			else
-				vcat(1:(i-1), (i+1):p.N)
-			end
+            crossWeights = regression(S, Y[i])
 
-			crossSamples(y) = sum([conditionalMean(R[i, j] .* w[j][end] , Y[i], y) for j in crossRange])
+            crossSamples = Y[i] .|> x -> regressor(crossWeights, Y[i], x)
 
-			append!(w[i], [-E[i] .\ (crossSamples.(Y[i]) .+ hatr[i])])
-		end
+            append!(U[i], [-R[i, i] .\ (crossSamples .+ r[i])])
+        end
 
-	end
+    end
 
-	return w
+    return U
 
 end

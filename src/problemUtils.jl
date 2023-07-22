@@ -17,12 +17,11 @@ checkProblem(P)
 """
 function checkProblem(p::QuadTeamProblem)
 
-	@assert size(p.m)[1] == p.N && size(p.m)[1] == size(p.a)[1] &&
-			size(p.a)[1] == p.N "Problem specification is wrong! sizes dont match. Sizes are: \n" *
-								"Lengh of array of measurement dimensions: $(size(p.m)[1] ) \n" *
-								"Lenght of array of action space dimensions: $(size(p.a)[1]) \n Number of agents: $(p.N) "
+    @assert size(p.m)[1] == p.N && size(p.m)[1] == size(p.a)[1] && size(p.a)[1] == p.N "Problem specification is wrong! sizes dont match. Sizes are: \n" *
+                                                                                       "Lengh of array of measurement dimensions: $(size(p.m)[1] ) \n" *
+                                                                                       "Lenght of array of action space dimensions: $(size(p.a)[1]) \n Number of agents: $(p.N) "
 
-	return p
+    return p
 end
 
 """
@@ -49,34 +48,35 @@ checkSample(P, s)
 """
 function checkSample(p::QuadTeamProblem, s::Sample)
 
-	#check types are correct
-	@assert eltype(s.c) == p.T "Sample has wrong numeric type: Sample type is $(eltype(s.c))," *
-							   " expected type $(p.T)"
+    #check types are correct
+    @assert eltype(s.c) == p.T "Sample has wrong numeric type: Sample type is $(eltype(s.c))," *
+                               " expected type $(p.T)"
 
-	#check measurement sizes are correct
-	for (y, n, i) in zip(s.Y, p.m, 1:p.N)
-		@assert size(y)[1] == n "measurement for agent $(i) is of wrong size! \n" *
-								" size is $(size(y)[1]) but should be $(n)"
-	end
+    #check measurement sizes are correct
+    for (y, n, i) in zip(s.Y, p.m, 1:p.N)
+        @assert size(y)[1] == n "measurement for agent $(i) is of wrong size! \n" *
+                                " size is $(size(y)[1]) but should be $(n)"
+    end
 
-	totalSize = sum(p.a)
+    totalSize = sum(p.a)
 
-	#check R has correct dimensions
-	@assert size(s.R)[1] == totalSize && size(s.R)[2] == totalSize "Sample of R(X) has wrong dimensions! \n" *
-																   "Row dimension is $(size(s.R)[1]) \n" *
-																   "Column dimension is $(size(s.R)[2]) \n" *
-																   "Both should be $(totalSize) !"
+    #check R has correct dimensions
+    @assert size(s.R)[1] == totalSize && size(s.R)[2] == totalSize "Sample of R(X) has wrong dimensions! \n" *
+                                                                   "Row dimension is $(size(s.R)[1]) \n" *
+                                                                   "Column dimension is $(size(s.R)[2]) \n" *
+                                                                   "Both should be $(totalSize) !"
 
-	#check R is positive definite and Hermitian/Symettric
-	@assert eigvals(s.R) .|> (x -> isapprox(imag(x), 0) ? real(x) : -1) |>
-			vec -> all(x -> x > 0, vec) "R(X) is not positive definite!"
+    #check R is positive definite and Hermitian/Symettric
+    @assert eigvals(s.R) .|>
+            (x -> isapprox(imag(x), 0) ? real(x) : -1) |>
+            vec -> all(x -> x > 0, vec) "R(X) is not positive definite!"
 
-	#check r
-	@assert size(s.r)[1] == totalSize "sample of r(X) has wrong dimensions! \n " *
-									  "dim is $(size(s.r)[1]) \n " *
-									  "but should be $(totalSize) !"
+    #check r
+    @assert size(s.r)[1] == totalSize "sample of r(X) has wrong dimensions! \n " *
+                                      "dim is $(size(s.r)[1]) \n " *
+                                      "but should be $(totalSize) !"
 
-	return s
+    return s
 
 end
 
@@ -94,7 +94,7 @@ Check the validity of a vector of Sample data for a given QuadTeamProblem `p`.
 
 """
 function checkData(p::QuadTeamProblem, S::Vector{<:Sample})
-	return S .|> (s -> checkSample(p, s))
+    return S .|> (s -> checkSample(p, s))
 end
 
 """
@@ -114,18 +114,17 @@ Check the output dimensions of the functions γ for each agent in the QuadTeamPr
 
 """
 function checkGamma(P::QuadTeamProblem, γ::Vector{<:Function})
-	# Generate random measurement vector with correct dimensions
-	Y = [rand(n) for n in P.m]
+    # Generate random measurement vector with correct dimensions
+    Y = [rand(n) for n in P.m]
 
-	for (i, g) in zip(1:P.N, γ)
-		result = g(Y[i])
-		@assert (ndims(result) == 0 && 1 == P.a[i]) ||
-				(size(result)[1] == P.a[i]) "Wrong output dimension for γ^$(i)!" *
-											" Output dimension is $((size(result) == ()) ? 1 : size(result)[1]) but should be $(P.a[i])"
+    for (i, g) in zip(1:P.N, γ)
+        result = g(Y[i])
+        @assert (ndims(result) == 0 && 1 == P.a[i]) || (size(result)[1] == P.a[i]) "Wrong output dimension for γ^$(i)!" *
+                                                                                   " Output dimension is $((size(result) == ()) ? 1 : size(result)[1]) but should be $(P.a[i])"
 
-	end
+    end
 
-	return γ
+    return γ
 end
 
 using IterTools, LinearAlgebra
@@ -144,8 +143,9 @@ Compute the loss function for a given Sample `s` using a vector of functions `γ
 
 """
 function loss(s::Sample, γ::Vector{<:Function})
-	v = collect(Iterators.flatten([g(y) for (g, y) in zip(γ, s.Y)]))
-	return real(dot(v, s.R * v) + 2 * real(dot(v, s.r)) + s.c)
+    v = collect(Iterators.flatten([g(y) for (g, y) in zip(γ, s.Y)]))
+    u = s.R \ s.r
+    return real(dot(v + u, s.R, v + u))
 end
 
 """
@@ -161,7 +161,7 @@ Compute the risk function for a given vector of Samples `S` using a vector of fu
 - `risk::Real`: The computed risk value.
 """
 function risk(S::Vector{<:Sample}, γ::Vector{<:Function})
-	return (S .|> (s -> loss(s, γ)) |> sum) / length(S)
+    return (S .|> (s -> loss(s, γ)) |> sum) / length(S)
 end
 
 """
@@ -179,14 +179,14 @@ Split a sample `s` into blocks based on the dimensions defined in the `QuadTeamP
 
 """
 function splitSampleIntoBlocks(p::QuadTeamProblem, s::Sample)
-	beginnings = accumulate(+, vcat(1, p.a)[1:end-1])
-	endings = accumulate(+, p.a)
-	R_blocks = [
-		s.R[a:b, c:d] for (a, b) in zip(beginnings, endings),
-		(c, d) in zip(beginnings, endings)
-	]
-	r_blocks = [s.r[a:b] for (a, b) in zip(beginnings, endings)]
-	return R_blocks, r_blocks
+    beginnings = accumulate(+, vcat(1, p.a)[1:end-1])
+    endings = accumulate(+, p.a)
+    R_blocks = [
+        s.R[a:b, c:d] for (a, b) in zip(beginnings, endings),
+        (c, d) in zip(beginnings, endings)
+    ]
+    r_blocks = [s.r[a:b] for (a, b) in zip(beginnings, endings)]
+    return R_blocks, r_blocks
 end
 
 """
@@ -208,32 +208,42 @@ Each entry of `r`, `r[i]` is a vector of the block of `r` that corresponds to th
 
 """
 function splitDataSetIntoBlocks(p::QuadTeamProblem, S::Vector{<:Sample})
-	split = S .|> s -> splitSampleIntoBlocks(p, s)
-	Y = [s.Y for s in S]
-	#vector of tuples to tuple of vectors 
-	splitR = [split[i][1] for i in 1:length(S)] 
-	splitr = [split[i][2] for i in 1:length(S)]
-	#reorganize into samples per agent
-	return [[y[i] for y in Y] for i in 1:p.N], [[R[i,:] for R in splitR] for i in 1:p.N], [[r[i] for r in splitr] for i in 1:p.N]
+    split = S .|> s -> splitSampleIntoBlocks(p, s)
+    Y = [s.Y for s in S]
+    #vector of tuples to tuple of vectors 
+    splitR = [split[i][1] for i = 1:length(S)]
+    splitr = [split[i][2] for i = 1:length(S)]
+    #reorganize into samples per agent
+    return [[y[i] for y in Y] for i = 1:p.N],
+    [[R[i, :] for R in splitR] for i = 1:p.N],
+    [[r[i] for r in splitr] for i = 1:p.N]
 end
 
 function uloss(u::Vector, R::Matrix, r::Vector)
-	s = R\r
-	return real(dot(u + s, R, u + s))
+    s = R \ r
+    return real(dot(u + s, R, u + s))
 end
 
 function urisk(Urange::Vector{<:Vector}, Rrange::Vector{<:Matrix}, rrange::Vector{<:Vector})
-    return sum([uloss(u, R, r) for (u, R, r) in zip(Urange, Rrange, rrange)])/length(Urange)
+    return sum([uloss(u, R, r) for (u, R, r) in zip(Urange, Rrange, rrange)]) / length(Urange)
 end
 
 function reformatR(N::Int, m::Int, R::Matrix{<:Vector})
-    return [vcat([hcat([R[i,j][l] for i in 1:N]...) for j in 1:N]...) for l in 1:m]
+    return [vcat([hcat([R[i, j][l] for i = 1:N]...) for j = 1:N]...) for l = 1:m]
 end
 
 function reformatr(N::Int, m::Int, r::Vector{<:Vector})
-    return [vcat([r[i][l] for i in 1:N]...) for l in 1:m]
+    return [vcat([r[i][l] for i = 1:N]...) for l = 1:m]
+end
+
+function reformatY(N::Int, m::Int, Y::Vector{<:Vector})
+    return [[Y[i][l] for l = 1:m] for i = 1:N]
 end
 
 function reformatW(N::Int, m::Int, iterations::Int, w::Vector{<:Vector})
-    return [[vcat([w[i][k][l] for i in 1:N]...) for l in 1:m] for k in 1:iterations]
+    return [[vcat([w[i][k][l] for i = 1:N]...) for l = 1:m] for k = 1:iterations]
+end
+
+function reformatYm(N::Int, m::Int, Y::Vector{<:Vector})
+    return [hcat(Y...)[l,:] for l in 1:m]
 end

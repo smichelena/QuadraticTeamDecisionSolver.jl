@@ -9,11 +9,11 @@ The `QuadTeamProblem` struct represents a quadratic team decision problem. In es
 - `a::Vector{Int}`: Array of action space dimensions for each agent.
 - `T::Type{T}`: Numeric type for the problem.
 """
-struct QuadTeamProblem{T <: Number}
-	N::Int
-	m::Vector{Int}
-	a::Vector{Int}
-	T::Type{T}
+struct QuadTeamProblem{T<:Number}
+    N::Int
+    m::Vector{Int}
+    a::Vector{Int}
+    T::Type{T}
 end
 
 """
@@ -37,10 +37,9 @@ The sample data includes the following components:
 - ``\\mathbf{r}``: Vector representing the linear term for the control policies.
 - ``\\mathbf{c}``: Constant term for the objective function.
 """
-struct Sample{T <: Number}
-	Y::Vector{Vector{T}}
-	R::Matrix{T}
-	r::Vector{T}
-	c::T
+struct Sample{T<:Number}
+    Y::Vector{Vector{T}}
+    R::Matrix{T}
+    r::Vector{T}
+    c::T
 end
-

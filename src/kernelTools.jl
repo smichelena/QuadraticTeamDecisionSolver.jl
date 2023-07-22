@@ -15,7 +15,7 @@ on the original sample space.
 
 """
 function exponentialKernel(x::Any, y::Any; h = 1)
-	return exp(-real((norm(x - y)^2) / h))
+    return exp(-real((norm(x - y)^2) / h))
 end
 
 """
@@ -29,7 +29,7 @@ Compute the gramian of a kernel ``K`` over the samples ``\\mathbf{Y} \\subset \\
 
 """
 function gramian(kernel::Function, X::Vector)
-	return [kernel(x, y) for x in X, y in X]
+    return [kernel(x, y) for x in X, y in X]
 end
 
 """
@@ -43,7 +43,7 @@ Compute the function norm: ``\\sum_{l=1}^m \\sum_{k=1}^m \\alpha_l \\alpha_k K( 
 
 """
 function kernelNorm(weights::Vector, kernelGramian::Matrix)
-	return real(dot(weights, kernelGramian * weights))
+    return real(dot(weights, kernelGramian * weights))
 end
 
 """
@@ -63,13 +63,8 @@ Evaluates a kernel function of the form ``f(\\mathbf{y}) = \\sum_{l=1}^m \\alpha
 - `y`: The point ``\\mathbf{y} \\in \\mathcal{Y}`` at which ``f`` is to be evaluated.
 
 """
-function kernelFunction(
-	kernel::Function,
-	weights::Vector,
-	Y::Vector,
-	x::Any,
-)
-	return dot([kernel(x, y) for y in Y], weights)
+function kernelFunction(kernel::Function, weights::Vector, Y::Vector, x::Any)
+    return dot([kernel(x, y) for y in Y], weights)
 end
 
 """
@@ -79,8 +74,8 @@ Computes an estimate of a conditonal expectation of the form ``\\mathbb{E}[\\mat
 
 """
 function densityConditionalMean(kernel::Function, X::Vector, Y::Vector, y::Any, h::Float64)
-	w = [kernel(y, yi; h=h) for yi ∈ Y]
-	return dot(w, X) / sum(w)
+    w = [kernel(y, yi; h = h) for yi ∈ Y]
+    return dot(w, X) / sum(w)
 end
 
 
@@ -111,11 +106,6 @@ Where ``\\mathcal{H}_k`` is a Reproducing Kernel Hilbert Space with kernel ``k``
 Note that `Y::Vector` and `O::Vector` must have the same length `m`.
 
 """
-function kernelInterpolation(
-    kernel::Function,
-	Y::Vector,
-	X::Vector;
-	λ = 0.5,
-)
-	return (gramian(kernel, X) + λ * I) \ Y
+function kernelInterpolation(kernel::Function, Y::Vector, X::Vector; λ = 0.5)
+    return (gramian(kernel, X) + λ * I) \ Y
 end
