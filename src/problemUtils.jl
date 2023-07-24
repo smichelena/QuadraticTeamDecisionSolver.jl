@@ -240,10 +240,10 @@ function reformatY(N::Int, m::Int, Y::Vector{<:Vector})
     return [[Y[i][l] for l = 1:m] for i = 1:N]
 end
 
-function reformatW(N::Int, m::Int, iterations::Int, w::Vector{<:Vector})
-    return [[vcat([w[i][k][l] for i = 1:N]...) for l = 1:m] for k = 1:iterations]
+function reformatU(N::Int, m::Int, iterations::Int, U::Vector{<:Vector})
+    return [[vcat([U[i][k][l] for i = 1:N]...) for l = 1:m] for k = 1:iterations]
 end
 
 function reformatYm(N::Int, m::Int, Y::Vector{<:Vector})
-    return [hcat(Y...)[l,:] for l in 1:m]
+    return [hcat(Y...)[l, :] for l = 1:m]
 end

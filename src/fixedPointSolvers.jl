@@ -24,8 +24,8 @@ function empiricalJacobiSolver!(
     regressor::Function;
     iterations = 5,
 )
-    wE = [regression(R[i, i], Y[i]) for i in 1:p.N]
-    wr = [regression(r[i], Y[i]) for i in 1:p.N]
+    wE = [regression(R[i, i], Y[i]) for i = 1:p.N]
+    wr = [regression(r[i], Y[i]) for i = 1:p.N]
     E = [Y[i] .|> x -> regressor(wE[i], Y[i], x) for i ∈ 1:p.N]
     hatr = [Y[i] .|> x -> regressor(wr[i], Y[i], x) for i ∈ 1:p.N]
 
@@ -150,8 +150,8 @@ function empiricalAlternatingSolver!(
     iterations = 5,
 )
 
-    wE = [regression(R[i, i], Y[i]) for i in 1:p.N]
-    wr = [regression(r[i], Y[i]) for i in 1:p.N]
+    wE = [regression(R[i, i], Y[i]) for i = 1:p.N]
+    wr = [regression(r[i], Y[i]) for i = 1:p.N]
     E = [Y[i] .|> x -> regressor(wE[i], Y[i], x) for i ∈ 1:p.N]
     hatr = [Y[i] .|> x -> regressor(wr[i], Y[i], x) for i ∈ 1:p.N]
 

@@ -14,12 +14,13 @@ export checkProblem,
     splitDataSetIntoBlocks,
     urisk,
     reformatR,
-    reformatW,
+    reformatU,
     reformatr,
     reformatY
 
 include("fixedPointSolvers.jl")
-export empiricalAlternatingSolver!, empiricalJacobiSolver!, jacobiPrecodingSolver!, alternatingPrecodingSolver!
+export empiricalAlternatingSolver!,
+    empiricalJacobiSolver!, jacobiPrecodingSolver!, alternatingPrecodingSolver!
 
 include("kernelTools.jl")
 export exponentialKernel,
@@ -27,5 +28,8 @@ export exponentialKernel,
 
 include("teamMMSEhelpers.jl")
 export teamMMSEproblem, generateTeamMMSEsamples, sampleComplexNormal
+
+include("experimentationTemplates.jl")
+export bandwidthExperiment, sinrExperiment, samplesExperiment
 
 end
