@@ -93,7 +93,7 @@ function jacobiPrecodingSolver!(
 
         temp = []
 
-        @distributed for i ∈ 1:p.N
+        for i ∈ 1:p.N #distributed doesnt work yet
 
             crossRange = if i == 1
                 2:p.N

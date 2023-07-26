@@ -4,7 +4,7 @@ function sinrExperiment(
     p::QuadTeamProblem,
     solver!::Function,
     sinr::AbstractFloat;
-    samples = 10,
+    samples = 1000,
     iterations = 10,
     bandwidth = 0.5,
     regularizer = 0.0,
@@ -40,7 +40,7 @@ function bandwidthExperiment(
     p::QuadTeamProblem,
     solver!::Function,
     bandwidth::AbstractFloat;
-    samples = 10,
+    samples = 1000,
     iterations = 10,
     sinr = 1.5,
     regularizer = 0.0,
@@ -68,7 +68,7 @@ function bandwidthExperiment(
         h = bandwidth,
         λ = regularizer,
     )
-    wtest = reformatW(p.N, samples, iterations, w)
+    wtest = reformatU(p.N, samples, iterations, w)
     return [urisk(wtest[k], tR, tr) for k = 1:iterations]
 end
 
