@@ -16,7 +16,8 @@ export checkProblem,
     reformatR,
     reformatU,
     reformatr,
-    reformatY
+    reformatY,
+    reformatYm
 
 include("fixedPointSolvers.jl")
 export empiricalAlternatingSolver!,
