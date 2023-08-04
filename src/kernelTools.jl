@@ -67,6 +67,28 @@ function kernelFunction(kernel::Function, weights::Vector, Y::Vector, x::Any)
     return dot([kernel(x, y) for y in Y], weights)
 end
 
+function kernelRegressor(kernel::Function, w::AbstractVector, X::AbstractVector, x::Any)
+    a = length(w[1][1,:])
+    k = [kernel(x, y)*ones(eltype(W[1]), a) for y in X]
+    return sum(w.*k)
+end
+
+function kernelRegression(k::Function, K::Matrix, Y::AbstractVector)
+
+    a = length(Y[1])
+    m = length(Y)
+
+    Yt = hcat(Y...)
+
+    W = [cg(K, Yt[l,:]) for l in 1:a]
+
+    Wt = hcat(W...)
+
+    Wtt = [Diagonal(Wt[l,:]) for l in 1:m]
+
+    return Wtt
+end
+
 """
     densityConditionalMean(kernel::Function, Y::Vector, X::Vector, y::Any, h::Float64)
 

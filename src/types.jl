@@ -38,7 +38,7 @@ The sample data includes the following components:
 - ``\\mathbf{c}``: Constant term for the objective function.
 """
 struct Sample{T<:Number}
-    Y::Vector{Vector{T}}
+    Y::Vector{Matrix{T}}
     R::Matrix{T}
     r::Vector{T}
     c::T

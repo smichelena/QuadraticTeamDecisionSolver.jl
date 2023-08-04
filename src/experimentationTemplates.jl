@@ -73,33 +73,24 @@ function bandwidthExperiment(
 end
 
 function samplesExperiment(
-	p::QuadTeamProblem,
+	t::teamMMSEproblem,
 	samples::Int;
 	bandwidth = 0.05,
+	δ = 0.9,
 	iterations = 10,
-	sinr = 1.5,
 	regularizer = 0.5,
-	eps = 0.0,
 	testSamples = 10000,
 )
-	t = teamMMSEproblem(
-		sinr,
-		zeros(Float64, p.N),
-		ones(Float64, p.N),
-		zeros(Float64, p.N),
-		0.5 * ones(Float64, p.N),
-		eps * ones(Float64, p.N),
-	)
 	#train
-	Y, R, r = generateTeamMMSEsamples(p, t, samples)
-	U = [[rand(ComplexF64, samples)] for _ ∈ 1:p.N]
+	_, Y, R, r, _ = generateTeamMMSEsamples(t, samples)
+	U = [[rand(ComplexF64, samples)] for _ ∈ 1:t.L]
 
-	k(x, y) = exp((-norm(x - y)^2) / bandwidth)
+	k(x, y) = δ * exp(-dot(x - y, x - y) / bandwidth) + (1 - δ) * dot(x, y)
 	regression(Y, X) = kernelInterpolation(k, Y, X, λ = regularizer)
 	regressor(w, X, x) = kernelFunction(k, w, X, x)
 
-	empiricalJacobiSolver!(
-		p,
+	jacobiPrecodingSolver!(
+		t,
 		U,
 		Y,
 		R,
@@ -110,22 +101,17 @@ function samplesExperiment(
 	)
 
 	W = [
-		[kernelInterpolation(k, U[i][l], Y[i], λ = regularizer) for i in 1:p.N] for
+		[regression(U[i][l], Y[i]) for i in 1:t.L] for
 		l in 1:iterations
 	]
 
 	#test
-	Yt, Rt, rt = generateTeamMMSEsamples(p, t, testSamples)
-	Ytt = reformatYm(p.N, testSamples, Yt)
-	Rtt = reformatR(p.N, testSamples, Rt)
-	rtt = reformatr(p.N, testSamples, rt)
+	_, Yt, Rt, rt, _ = generateTeamMMSEsamples(t, testSamples)
+	Ytt = reformatYm(t.L, testSamples, Yt)
+	Rtt = reformatR(t.L, testSamples, Rt)
+	rtt = reformatr(t.L, testSamples, rt)
 
-	S = [Sample(Y, R, r, 1.0+0.0im) for (Y, R, r) in zip(Ytt, Rtt, rtt)]
+	S = [Sample(Y, R, r, 1.0 + 0.0im) for (Y, R, r) in zip(Ytt, Rtt, rtt)]
 
-	result = [
-		risk(S, [x -> kernelFunction(k, W[i][l], Y[i], x) for i in 1:p.N]) for
-		l in 1:iterations
-	]
-
-	return result
+	return risk(S, [x -> regressor(W[end][i], Y[i], x) for i in 1:t.L])
 end
