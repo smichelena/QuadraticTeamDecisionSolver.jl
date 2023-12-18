@@ -1,0 +1,189 @@
+"""
+	QuadTeamProblem{T <: Number}
+
+The `QuadTeamProblem` struct represents a quadratic team decision problem. In essence, it stores the correct problem dimensions and the field over which the problem is solved.
+
+# Fields
+- `N::Int`: Number of agents in the team.
+- `m::Vector{Int}`: Array of measurement dimensions for each agent.
+- `a::Vector{Int}`: Array of action space dimensions for each agent.
+- `T::Type{T}`: Numeric type for the problem.
+"""
+struct QuadTeamProblem{T <: Number}
+	N::Int
+	m::Vector{Int}
+	a::Vector{Int}
+	T::Type{T}
+end
+
+"""
+	checkProblem(p::QuadTeamProblem)
+
+Check the consistency and correctness of a `QuadTeamProblem` object `p`.
+
+# Arguments
+- `p::QuadTeamProblem`: The QuadTeamProblem object representing the problem specification.
+
+# Errors
+- `AssertionError`: Throws an error if the problem specification is incorrect or inconsistent.
+
+# Example
+```julia
+P = QuadTeamProblem(...)
+checkProblem(P)
+```
+"""
+function checkProblem(p::QuadTeamProblem)
+
+	@assert size(p.m)[1] == p.N && size(p.m)[1] == size(p.a)[1] && size(p.a)[1] == p.N "Problem specification is wrong! sizes dont match. Sizes are: \n" *
+																					   "Lengh of array of measurement dimensions: $(size(p.m)[1] ) \n" *
+																					   "Lenght of array of action space dimensions: $(size(p.a)[1]) \n Number of agents: $(p.N) "
+
+	return p
+end
+
+
+"""
+	checkGamma(P::QuadTeamProblem, γ::Vector{<:Function})
+
+Check the output dimensions of the functions γ for each agent in the QuadTeamProblem `P`.
+
+# Arguments
+- `P::QuadTeamProblem`: The QuadTeamProblem specifying the problem.
+- `γ::Vector{Function}`: Vector of functions γ for each agent.
+
+# Returns
+- `γ::Vector{Function}`: The input vector of functions γ.
+
+# Errors
+- Throws an error if the output dimensions of the functions γ do not match the specified dimensions in P.
+
+"""
+function checkGamma(P::QuadTeamProblem, γ::Vector{<:Function})
+	# Generate random measurement vector with correct dimensions
+	Y = [rand(n) for n in P.m]
+
+	for (i, g) in zip(1:P.N, γ)
+		result = g(Y[i])
+		@assert (ndims(result) == 0 && 1 == P.a[i]) || (size(result)[1] == P.a[i]) "Wrong output dimension for γ^$(i)!" *
+																				   " Output dimension is $((size(result) == ()) ? 1 : size(result)[1]) but should be $(P.a[i])"
+
+	end
+
+	return γ
+end
+
+"""
+	residual(m::Int, p::QuadTeamProblem, kernels::Vector{<:Function}, γ::Vector{<:Vector{<:Vector}},
+		Y::Vector{<:Vector}, Q::Matrix{<:Vector}, R::Vector{<:Vector})
+
+Compute the residual function
+
+```math
+\\mathrm{res}(\\gamma) := \\mathbf{A}\\gamma + \\mathbf{\\tilde{R}}
+```
+
+for a given tuple of policies ``\\gamma = (\\gamma^1, \\dots, \\gamma^N)``.
+
+# Arguments
+- `m::Int`: Number of training samples.
+- `p::QuadTeamProblem`: A quad team problem object.
+- `kernels::Vector{<:Function}`: Vector of kernel functions.
+- `γ::Vector{<:Vector{<:Vector}}`: Vector of gamma kernel function coefficients.
+- `Y::Vector{<:Vector}`: Vector of measurement vector samples.
+- `Q::Matrix{<:Vector}`: Matrix of system matrix samples, organized block-wise.
+- `R::Vector{<:Vector}`: Vector of linear term samples, organized block-wise.
+
+# Returns
+- `res`: vector of kernel function coefficient vectors corresponding to residual function.
+
+"""
+function residual(
+	m::Int,
+	p::QuadTeamProblem,
+	kernels::Vector{<:Function},
+	γ::Vector{<:Vector{<:Vector}},
+	Y::Vector{<:Vector},
+	Q::Matrix{<:Vector},
+	R::Vector{<:Vector},
+    λ::Vector{<:AbstractFloat}
+)
+	#initialize solution
+	res = 0 * γ
+
+	#diagonal terms
+	fii = [kernelRegression(kernels[i], Q[i, i], Y[i], λ = λ[i]) for i ∈ 1:p.N]
+	fii_samples = [Y[i] .|> x -> kernelFunction(kernels[i], fii[i], Y[i], x) for i ∈ 1:p.N]
+
+	#linear term
+	fi = [kernelRegression(kernels[i], R[i], Y[i], λ = λ[i]) for i ∈ 1:p.N]
+	fi_samples = [Y[i] .|> x -> kernelFunction(kernels[i], fi[i], Y[i], x) for i ∈ 1:p.N]
+
+	#gamma samples
+	U = [Y[i] .|> x -> kernelFunction(kernels[i], γ[i], Y[i], x) for i in 1:p.N]
+
+	#cross terms
+	for i in 1:p.N
+		#sample cross terms
+		S = [zeros(p.T, p.a[i]) for _ in 1:m]
+		for j in setdiff(1:p.N, i)
+			S += Q[i, j] .* U[j][end]
+		end
+
+		fij = kernelRegression(kernels[i], S, Y[i], λ = λ[i])
+		fij_samples = Y[i] .|> x -> kernelFunction(kernels[i], fij, Y[i], x)
+
+		fiig = [f .* u for (f, u) in zip(fii_samples[i], U[i])]
+
+		res_samples = fiig .+ fij_samples .+ fi_samples[i]
+
+		res[i] = kernelRegression(kernels[i], res_samples, Y[i], λ = λ[i])
+	end
+
+	return res
+end
+
+"""
+    gammaNorm(f::Function, Y::AbstractVector)
+
+Compute the ``\\Gamma^i`` norm of a given function ``f \\in \\Gamma^i`` approximated 
+using measurement vector data, that is, samples of ``\\mathbf{Y}_i``.
+
+# Arguments
+- `f::Function`: The function for which the norm is to be computed.
+- `Y::AbstractVector`: Input data vector.
+
+# Returns
+- `norm`: ``\\Gamma^i``-norm of f.
+
+# Details
+The gamma norm is calculated as the squared Euclidean norm of the function's evaluations on the input data, normalized by the length of the input data.
+
+"""
+function gammaNorm(f::Function, Y::AbstractVector; p=2)
+	return norm(f.(Y), p)
+end
+
+"""
+    GammaNorm(F::Vector{<:Function}, Y::AbstractVector)
+
+Compute the ``\\Gamma`` norm of a given function tuple ``F = (f_1, \\dots, f_i) \\in \\Gamma = \\Gamma^i\\times\\dots\\times\\Gamma^N`` 
+approximated using measurement vector data, that is, samples of ``\\mathbf{Y} = (\\mathbf{Y}_i,\\dots,\\mathbf{Y}_N)``.
+
+# Arguments
+- `F::Vector{<:Function}`: Vector of functions for which the gamma norm is to be computed.
+- `Y::AbstractVector`: Input data vector.
+
+# Returns
+- `norm`: ``\\Gamma^i``-norm of F.
+"""
+function GammaNorm(F::Vector{<:Function}, Y::AbstractVector; p = 2)
+	return sum([gammaNorm(f, y, p=p) for (f, y) in zip(F, Y)])
+end
+
+
+function cost(p::QuadTeamProblem, F::Vector{<:Function}, Y::Vector{<:Vector}, Q::Matrix{<:Vector}, R::Vector{<:Vector}, c::Vector{<:AbstractFloat})
+	g = [F[i].(Y[i]) for i in 1:p.N]
+	loss = [dot.(g[i], Q[i,j], g[j]) + 2*real(dot.(g[i], R[i])) .+ c[i] for i in 1:p.N, j in 1:p.N]
+	return real(mean(vcat(loss...)))
+end

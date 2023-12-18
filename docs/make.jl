@@ -6,7 +6,7 @@ makedocs(
         "Home" => "index.md",
         "General Utility Functions" => "problemUtils.md",
         "Solvers" => "solvers.md",
-        "Kernel Tools" => "kernelTools.md"
+        "Kernel Tools" => "kernelTools.md",
     ],
 )
 
