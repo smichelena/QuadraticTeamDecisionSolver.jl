@@ -7,7 +7,7 @@ include("teamMMSE.jl")
 export teamMMSEproblem, generateTeamMMSEsamples, sampleComplexNormal
 
 include("fixedPointSolvers.jl")
-export jacobiSolver, gaussSeidelSolver
+export jacobiSolver, gaussSeidelSolver, SORSolver
 
 include("kernelMethods.jl")
 export exponentialKernel,

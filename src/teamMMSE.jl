@@ -25,22 +25,22 @@ struct teamMMSEproblem
 end
 
 """
-sampleComplexNormal(σ::AbstractFloat, K::Int, N::Int)
+sampleComplexNormal(σ::AbstractFloat, K::Int, L::Int)
 
 Sample from the circularly symmetric complex Gaussian distribution.
 
 Parameters:
 - `σ::AbstractFloat`: The standard deviation of the normal distributions for both the real and imaginary parts of the complex numbers.
 - `K::Int`: The number of rows in the output matrix.
-- `N::Int`: The number of columns in the output matrix.
+- `L::Int`: The number of antennas
 
 Returns:
 - A KxN matrix of complex numbers with circularly symmetric Gaussian distribution.
 """
-function sampleComplexNormal(σ::AbstractFloat, K::Int, N::Int)
+function sampleComplexNormal(σ::AbstractFloat, K::Int, L::Int)
 	distRe = Distributions.Normal(0, σ / 2)
 	distIm = Distributions.Normal(0, σ / 2)
-	return rand(distRe, K, N) + rand(distIm, K, N)im
+	return rand(distRe, K, L) + rand(distIm, K, L)im
 end
 
 """

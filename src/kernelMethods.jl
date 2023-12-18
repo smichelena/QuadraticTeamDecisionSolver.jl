@@ -138,14 +138,15 @@ function kernelRegression(k::Function, Y::AbstractVector, X::AbstractVector; λ 
 	G = hvcat((m), kernelGramian...)
 
 	#flatten observations vector
-	Y = vcat(Y...)
+	Yc = vcat(Y...)
 
 	#solve linear system
-	μ = cg(G + λ * I, Y)
+	μ = (G + λ * I)\Yc
 
 	#rearrange weights vector
-	L = length(μ)
-	α = [μ[i:i+n-1] for i in 1:n:L]
-
-	return α
+	if ndims(Y[1]) > 1
+		return [μ[i:i+n-1,:] for i in 1:n:m*n]
+	else
+	    return [μ[i:i+n-1] for i in 1:n:m*n]
+	end
 end
