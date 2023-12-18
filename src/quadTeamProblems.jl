@@ -109,7 +109,8 @@ function residual(
     λ::Vector{<:AbstractFloat}
 )
 	#initialize solution
-	res = 0 * γ
+	res = Vector{Vector{Vector{p.T}}}(undef, length(γ))
+
 
 	#diagonal terms
 	fii = [kernelRegression(kernels[i], Q[i, i], Y[i], λ = λ[i]) for i ∈ 1:p.N]
@@ -127,17 +128,19 @@ function residual(
 		#sample cross terms
 		S = [zeros(p.T, p.a[i]) for _ in 1:m]
 		for j in setdiff(1:p.N, i)
-			S += Q[i, j] .* U[j][end]
+			S += Q[i, j] .* U[j]
 		end
 
 		fij = kernelRegression(kernels[i], S, Y[i], λ = λ[i])
 		fij_samples = Y[i] .|> x -> kernelFunction(kernels[i], fij, Y[i], x)
 
-		fiig = [f .* u for (f, u) in zip(fii_samples[i], U[i])]
+		fiig = [f * u for (f, u) in zip(fii_samples[i], U[i])]
 
 		res_samples = fiig .+ fij_samples .+ fi_samples[i]
 
-		res[i] = kernelRegression(kernels[i], res_samples, Y[i], λ = λ[i])
+		temp = kernelRegression(kernels[i], res_samples, Y[i], λ = λ[i])
+
+		res[i] = temp .|> x -> vcat(x...)
 	end
 
 	return res
@@ -160,8 +163,9 @@ using measurement vector data, that is, samples of ``\\mathbf{Y}_i``.
 The gamma norm is calculated as the squared Euclidean norm of the function's evaluations on the input data, normalized by the length of the input data.
 
 """
-function gammaNorm(f::Function, Y::AbstractVector; p=2)
-	return norm(f.(Y), p)
+function gammaNorm(f::Function, Y::AbstractVector)
+	R = f.(Y)
+	return real(mean([r'*r for r in R]))
 end
 
 """
@@ -177,13 +181,13 @@ approximated using measurement vector data, that is, samples of ``\\mathbf{Y} = 
 # Returns
 - `norm`: ``\\Gamma^i``-norm of F.
 """
-function GammaNorm(F::Vector{<:Function}, Y::AbstractVector; p = 2)
-	return sum([gammaNorm(f, y, p=p) for (f, y) in zip(F, Y)])
+function GammaNorm(F::Vector{<:Function}, Y::AbstractVector)
+	return sqrt(sum([gammaNorm(f, y) for (f, y) in zip(F, Y)]))
 end
 
 
 function cost(p::QuadTeamProblem, F::Vector{<:Function}, Y::Vector{<:Vector}, Q::Matrix{<:Vector}, R::Vector{<:Vector}, c::Vector{<:AbstractFloat})
 	g = [F[i].(Y[i]) for i in 1:p.N]
-	loss = [dot.(g[i], Q[i,j], g[j]) + 2*real(dot.(g[i], R[i])) .+ c[i] for i in 1:p.N, j in 1:p.N]
+	loss = [dot.(g[i], Q[i,j], g[j]) + 2*real(dot.(g[i], R[i])) .+ c[i] for j in 1:p.N, i in 1:p.N]
 	return real(mean(vcat(loss...)))
 end
