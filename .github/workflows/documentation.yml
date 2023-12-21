@@ -17,23 +17,13 @@ jobs:
       - name: Setup Julia
         uses: julia-actions/setup-julia@v1
         with:
-          version: '1'
-
-      - name: Install Dependencies and Build Documentation
+          version: '1' # Change this to match your Julia version
+      - name: Install dependencies
         run: |
-          julia --project=docs -e '
-            import Pkg;
-            Pkg.develop(PackageSpec(path=pwd()))
-            Pkg.instantiate();
-            Pkg.add("Documenter")'
-          julia --project=docs -e '
-            using Pkg;
-            using Documenter: doctest;
-            using QuadraticTeamDecisionSolver;
-            doctest(QuadraticTeamDecisionSolver)'
-
-      - name: Build and Deploy Documentation
-        run: julia --project=docs docs/make.jl
+          julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+          julia --project=docs/ -e 'import Pkg; Pkg.add("DocumenterCitations")'
+      - name: Build and deploy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
+        run: julia --project=docs/ docs/make.jl
