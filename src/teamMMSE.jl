@@ -1,7 +1,7 @@
 using QuadraticTeamDecisionSolver, Distributions, LinearAlgebra
 
 """
-struct teamMMSEproblem
+	struct teamMMSEproblem
 
 A struct to specify parameters for a problem from the team MMSE class.
 
@@ -12,7 +12,7 @@ Attributes:
 - K::Int: The number of receivers in the problem.
 - σₕ::Vector{AbstractFloat}: Vector specifying channel covariances.
 - σₙ::Vector{AbstractFloat}: Vector specifying noise covariances.
-- ϵ::Vector{AbstractFloat}: vector of link coefficients ``\\varepsilon_i \\in (0,1), i =1,\\dots,N``.
+- ϵ::Vector{AbstractFloat}: vector of link coefficients ``\\varepsilon_i \\in (0,1), i \\in \\{1,\\dots,N\\}``.
 """
 struct teamMMSEproblem
 	P::AbstractFloat #SINR
@@ -25,7 +25,7 @@ struct teamMMSEproblem
 end
 
 """
-sampleComplexNormal(σ::AbstractFloat, K::Int, L::Int)
+	sampleComplexNormal(σ::AbstractFloat, K::Int, L::Int)
 
 Sample from the circularly symmetric complex Gaussian distribution.
 

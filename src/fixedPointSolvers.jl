@@ -1,15 +1,23 @@
 """
 	jacobiSolver(
 		p::QuadTeamProblem,
-		U::Vector{<:Vector},
+		m::Int,
 		Y::Vector{<:Vector},
-		R::Matrix{<:Vector},
-		r::Vector{<:Vector}
-		regression::Function;
+		Q::Matrix{<:Vector},
+		R::Vector{<:Vector},
+		kernels::Vector{<:Function},
+		λ::Vector{Float64};
 		iterations = 5,
+		random_init = false,`
 	)
 
-Approximately sample the solution to a quadratic team decision problem using a Jacobi iteration scheme.
+Implements the Jacobi operator splitting method to generate policy updates.
+
+Converges to the unique team optimal ``\\gamma^*`` whenever
+	
+```math
+\\lambda_{\\mathrm{min}}  > \\varrho(\\mathbf{T})
+```
 
 """
 function jacobiSolver(
@@ -69,15 +77,19 @@ end
 """
 	gaussSeidelSolver(
 		p::QuadTeamProblem,
-		U::Vector{<:Vector},
+		m::Int,
 		Y::Vector{<:Vector},
-		R::Matrix{<:Vector},
-		r::Vector{<:Vector}
-		regression::Function;
+		Q::Matrix{<:Vector},
+		R::Vector{<:Vector},
+		kernels::Vector{<:Function},
+		λ::Vector{Float64};
 		iterations = 5,
+		random_init = false,
 	)
 
-Approximately sample the solution to a quadratic team decision problem using a Jacobi iteration scheme.
+Implements the Gauss-Seidel operator splitting method to generate policy updates.
+
+Guaranteed to converge to the unique team optimal ``\\gamma^*``.
 
 """
 function gaussSeidelSolver(
@@ -137,15 +149,24 @@ end
 """
 	SORSolver(
 		p::QuadTeamProblem,
-		U::Vector{<:Vector},
+		m::Int,
 		Y::Vector{<:Vector},
-		R::Matrix{<:Vector},
-		r::Vector{<:Vector}
-		regression::Function;
+		Q::Matrix{<:Vector},
+		R::Vector{<:Vector},
+		kernels::Vector{<:Function},
+		λ::Vector{Float64};
 		iterations = 5,
+		random_init = false,
+		omega = 1.0,
 	)
 
-Approximately sample the solution to a quadratic team decision problem using a Jacobi iteration scheme.
+Implements the Successive-Over-Relaxation (SOR) operator splitting method to generate policy updates.
+
+Converges to the unique team optimal ``\\gamma^*`` for all ``\\omega \\neq 0`` that fulfill 
+
+```math
+	1 - \\frac{\\lambda_{\\mathrm{min}}}{\\varrho(\\mathbf{T})} < \\omega < 1 + \\frac{\\lambda_{\\mathrm{min}}}{\\varrho(\\mathbf{T})}
+```
 
 """
 function SORSolver(

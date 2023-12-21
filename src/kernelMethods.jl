@@ -25,16 +25,16 @@ end
 Matrix Valued Gaussian Mixture Kernel 
 
 # Arguments:
-- `h::Vector{Float64}`: Vector of kernel bandwidths ``\\sigma_i, i = 1, \\dots, n``.
-- `M::Vector{<:Matrix}`: Vector of mixture matrices ``M_i, \\dots, n``.
-- `λ::Vector{Float64}`: Vector of convex combination coefficients ``\\lambda_i,i = 1, \\dots, n, \\ \\sum_{i=1}^n\\lambda_i = 1``.
+- `h::Vector{Float64}`: Vector of kernel bandwidths ``\\sigma_i, i \\in \\{ 1, \\dots, L \\}``.
+- `M::Vector{<:Matrix}`: Vector of mixture matrices ``M_i, i \\in \\{ 1, \\dots, L \\}``.
+- `λ::Vector{Float64}`: Vector of convex combination coefficients ``\\lambda_i,i \\in \\{ 1, \\dots, L \\}^2, \\ \\sum_{i=1}^L\\lambda_i = 1``.
 - `x::Vector`: A data sample ``x \\in \\mathcal{X}``.
 - `x::Vector`: Also a data sample.
 
 # Returns:
 - Value of matrix kernel computed at `x` and `y` with specified input parameters.
 ```math
-	K(x,t) = \\sum_{i=1}^n \\lambda_ie^{-\\sigma_i^{-1}d_{\\mathcal{X}}(x,y)^2}M_i
+	K(x,t) = \\sum_{i=1}^L \\lambda_ie^{-\\sigma_i^{-1}d_{\\mathcal{X}}(x,y)^2}M_i
 ```
 
 """
@@ -45,18 +45,20 @@ function matrixExponentialKernel(
 	x::Any,
 	t::Any,
 )
-	return sum([a * exponentialKernel(x, t; h = l) * B for (a, l, B) in zip(λ, h, M)])
+	return sum([
+		a * exponentialKernel(x, t; h = l) * B for (a, l, B) in zip(λ, h, M)
+	])
 end
 
 
 """
-	gramian(kernel::Function, Y::Vector{<:Vector})
+	gramian(kernel::Function, X::Vector{<:Vector})
 
-Compute the gramian of a kernel ``K`` over the samples ``\\mathbf{Y} \\subset \\mathcal{Y}``.
+Compute the gramian of a kernel ``K`` over the samples ``\\mathbf{X}^n \\subset \\mathcal{X}``.
 
 # Arguments:
 - `kernel::Function`: A positive definite kernel function.
-- `Y::Vector{<:Vector}`: The samples over which the gramian is to be constructed.
+- `X::Vector{<:Vector}`: The samples over which the gramian is to be constructed.
 
 """
 function gramian(kernel::Function, X::AbstractVector)
@@ -66,11 +68,11 @@ end
 """
 	kernelNorm(weights::Vector, kernelGramian::Matrix)
 
-Compute the function norm: ``\\sum_{l=1}^m \\sum_{k=1}^m \\alpha_l \\alpha_k K( \\mathbf{y}_l, \\mathbf{y}_k )`` of a function in a reproducing kernel Hilbert space. Th
+Compute the function norm: ``\\sum_{i=1}^n \\sum_{j=1}^n \\mu_i \\mu_j K( x^{(i)}, x^{(j)} )`` of a function in a reproducing kernel Hilbert space. Th
 
 # Arguments:
-- `weights::Vector`: The ``\\alpha``'s in the above expression.
-- `kernelGramian::Matrix`: The gramian of ``K`` over the samples ``\\mathbf{Y}``
+- `weights::Vector`: The ``\\mu``'s in the above expression.
+- `kernelGramian::Matrix`: The gramian of ``K`` over the samples ``\\mathbf{X}^n``
 
 """
 function kernelNorm(weights::Vector, kernelGramian::Matrix)
@@ -87,20 +89,18 @@ end
 		x::Vector,
 	)
 
-Evaluates a kernel function of the form ``f(\\mathbf{x}) = \\sum_{l=1}^m \\alpha_l K(\\mathbf{x}, \\mathbf{x}_{(l)})``
+Evaluates a kernel function of the form ``f(x) = \\sum_{i=1}^n \\mu_i K(x, x^{(i)})``
 
 # Arguments:
 
 - `kernel::Function` scalar or matrix valued Kernel function that defines the RKHS where ``f`` lives.
-- `weights`: The ``\\alpha``'s in the above expression.
+- `weights`: The ``\\mu``'s in the above expression.
 - `x`: The point ``\\mathbf{x} \\in \\mathcal{X}`` at which ``f`` is to be evaluated.
 
 """
 function kernelFunction(kernel::Function, weights::Vector, X::Vector, x::Any)
 	return sum([kernel(x, t) * a for (t, a) in zip(X, weights)])
 end
-
-using IterativeSolvers
 
 """
 	kernelRegression(
@@ -113,13 +113,11 @@ using IterativeSolvers
 Solves the kernel regression problem
 
 ```math
-\\begin{align*}
-		\\text{find: } &f^* \\in \\argmin_{f \\in \\mathcal{H}_k} \\sum_{i=1}^m \\lvert \\lvert y_i - f(x_i) \\rvert \\rvert_{\\mathcal{Y}}^2 + \\lambda \\lvert \\lvert f \\rvert \\rvert_{\\mathcal{H}_k}^2 
-\\end{align*}
+f^* = \\argmin_{f \\in \\mathcal{H}_k} \\sum_{i=1}^n \\lvert \\lvert f(x^{(i)}) - y^{(i)} \\rvert \\rvert_{\\mathcal{Y}}^2 + \\lambda \\lvert \\lvert f \\rvert \\rvert_{\\mathcal{H}_k}^2 
 ```
-Where ``\\{x_i, y_i\\}_{i=1}^m \\subset \\mathcal{X}\\times\\mathcal{Y}`` are data samples, and ``\\mathcal{H}_k`` is a Reproducing Kernel Hilbert Space with kernel ``k``.
+Where ``\\{x^{(i)}, y^{(i)} \\}_{i=1}^n \\subset \\mathcal{X}\\times\\mathcal{Y}`` are data samples, and ``\\mathcal{H}_k`` is a Reproducing Kernel Hilbert Space with kernel ``k``.
 
-Moreover, this implementation can handle the case ``\\mathcal{Y} = \\mathbb{C}^d`` for ``d > 1``. That is, this implements vector valued kernel regression, as well as scalar valued.
+Moreover, this implementation can handle the case ``\\mathcal{Y} = \\mathbb{C}^d`` for ``d > 1``. That is, this implements vector valued kernel regression, as well as scalar valued kernel regression.
 
 # Arguments:
 - `kernel::Function`: The kernel function that corresponds to ``\\mathcal{H}_k``.
@@ -127,13 +125,18 @@ Moreover, this implementation can handle the case ``\\mathcal{Y} = \\mathbb{C}^d
 - `Y::Vector`: Vector of samples in output space ``\\mathcal{Y}``.
 - `λ = 0.5`: Regularization constant.
 
-Note that `Y::Vector` and `X::Vector` must have the same length `m`.
+Note that `Y::Vector` and `X::Vector` must have the same length `n`.
 
 """
-function kernelRegression(k::Function, Y::AbstractVector, X::AbstractVector; λ = 0.5)
+function kernelRegression(
+	k::Function,
+	Y::AbstractVector,
+	X::AbstractVector;
+	λ = 0.5,
+)
 	#compute gramian and flatten it
 	kernelGramian = gramian(k, X)
-	n = size(kernelGramian[1,1], 1)
+	n = size(kernelGramian[1, 1], 1)
 	m = size(kernelGramian, 2)
 	G = hvcat((m), kernelGramian...)
 
@@ -141,12 +144,12 @@ function kernelRegression(k::Function, Y::AbstractVector, X::AbstractVector; λ 
 	Yc = vcat(Y...)
 
 	#solve linear system
-	μ = (G + λ * I)\Yc
+	μ = (G + λ * I) \ Yc
 
 	#rearrange weights vector
 	if ndims(Y[1]) > 1
-		return [μ[i:i+n-1,:] for i in 1:n:m*n]
+		return [μ[i:i+n-1, :] for i in 1:n:m*n]
 	else
-	    return [μ[i:i+n-1] for i in 1:n:m*n]
+		return [μ[i:i+n-1] for i in 1:n:m*n]
 	end
 end

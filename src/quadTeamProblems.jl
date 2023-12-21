@@ -44,7 +44,7 @@ end
 
 
 """
-	checkGamma(P::QuadTeamProblem, γ::Vector{<:Function})
+	checkGamma(p::QuadTeamProblem, γ::Vector{<:Function})
 
 Check the output dimensions of the functions γ for each agent in the QuadTeamProblem `P`.
 
@@ -59,14 +59,14 @@ Check the output dimensions of the functions γ for each agent in the QuadTeamPr
 - Throws an error if the output dimensions of the functions γ do not match the specified dimensions in P.
 
 """
-function checkGamma(P::QuadTeamProblem, γ::Vector{<:Function})
+function checkGamma(p::QuadTeamProblem, γ::Vector{<:Function})
 	# Generate random measurement vector with correct dimensions
-	Y = [rand(n) for n in P.m]
+	Y = [rand(n) for n in p.m]
 
-	for (i, g) in zip(1:P.N, γ)
+	for (i, g) in zip(1:p.N, γ)
 		result = g(Y[i])
-		@assert (ndims(result) == 0 && 1 == P.a[i]) || (size(result)[1] == P.a[i]) "Wrong output dimension for γ^$(i)!" *
-																				   " Output dimension is $((size(result) == ()) ? 1 : size(result)[1]) but should be $(P.a[i])"
+		@assert (ndims(result) == 0 && 1 == p.a[i]) || (size(result)[1] == p.a[i]) "Wrong output dimension for γ^$(i)!" *
+																				   " Output dimension is $((size(result) == ()) ? 1 : size(result)[1]) but should be $(p.a[i])"
 
 	end
 
@@ -74,8 +74,16 @@ function checkGamma(P::QuadTeamProblem, γ::Vector{<:Function})
 end
 
 """
-	residual(m::Int, p::QuadTeamProblem, kernels::Vector{<:Function}, γ::Vector{<:Vector{<:Vector}},
-		Y::Vector{<:Vector}, Q::Matrix{<:Vector}, R::Vector{<:Vector})
+	residual(
+		m::Int,
+		p::QuadTeamProblem,
+		kernels::Vector{<:Function},
+		γ::Vector{<:Vector{<:Vector}},
+		Y::Vector{<:Vector},
+		Q::Matrix{<:Vector},
+		R::Vector{<:Vector},
+		λ::Vector{<:AbstractFloat},
+	)
 
 Compute the residual function
 
@@ -106,7 +114,7 @@ function residual(
 	Y::Vector{<:Vector},
 	Q::Matrix{<:Vector},
 	R::Vector{<:Vector},
-    λ::Vector{<:AbstractFloat}
+	λ::Vector{<:AbstractFloat},
 )
 	#initialize solution
 	res = Vector{Vector{Vector{p.T}}}(undef, length(γ))
@@ -147,7 +155,7 @@ function residual(
 end
 
 """
-    gammaNorm(f::Function, Y::AbstractVector)
+	gammaNorm(f::Function, Y::AbstractVector)
 
 Compute the ``\\Gamma^i`` norm of a given function ``f \\in \\Gamma^i`` approximated 
 using measurement vector data, that is, samples of ``\\mathbf{Y}_i``.
@@ -165,11 +173,11 @@ The gamma norm is calculated as the squared Euclidean norm of the function's eva
 """
 function gammaNorm(f::Function, Y::AbstractVector)
 	R = f.(Y)
-	return real(mean([r'*r for r in R]))
+	return real(mean([r' * r for r in R]))
 end
 
 """
-    GammaNorm(F::Vector{<:Function}, Y::AbstractVector)
+	GammaNorm(F::Vector{<:Function}, Y::AbstractVector)
 
 Compute the ``\\Gamma`` norm of a given function tuple ``F = (f_1, \\dots, f_i) \\in \\Gamma = \\Gamma^i\\times\\dots\\times\\Gamma^N`` 
 approximated using measurement vector data, that is, samples of ``\\mathbf{Y} = (\\mathbf{Y}_i,\\dots,\\mathbf{Y}_N)``.
@@ -179,7 +187,7 @@ approximated using measurement vector data, that is, samples of ``\\mathbf{Y} = 
 - `Y::AbstractVector`: Input data vector.
 
 # Returns
-- `norm`: ``\\Gamma^i``-norm of F.
+- `norm`: ``\\Gamma``-norm of F.
 """
 function GammaNorm(F::Vector{<:Function}, Y::AbstractVector)
 	return sqrt(sum([gammaNorm(f, y) for (f, y) in zip(F, Y)]))
@@ -188,6 +196,6 @@ end
 
 function cost(p::QuadTeamProblem, F::Vector{<:Function}, Y::Vector{<:Vector}, Q::Matrix{<:Vector}, R::Vector{<:Vector}, c::Vector{<:AbstractFloat})
 	g = [F[i].(Y[i]) for i in 1:p.N]
-	loss = [dot.(g[i], Q[i,j], g[j]) + 2*real(dot.(g[i], R[i])) .+ c[i] for j in 1:p.N, i in 1:p.N]
+	loss = [dot.(g[i], Q[i, j], g[j]) + 2 * real(dot.(g[i], R[i])) .+ c[i] for j in 1:p.N, i in 1:p.N]
 	return real(mean(vcat(loss...)))
 end
