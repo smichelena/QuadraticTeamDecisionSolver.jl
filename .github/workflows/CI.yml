@@ -47,7 +47,9 @@ jobs:
             import Pkg; Pkg.add("Documenter")
             using Pkg
             Pkg.develop(PackageSpec(path=pwd()))
-            Pkg.instantiate()'
+            Pkg.instantiate();
+            Pkg.add("Documenter")
+            Pkg.add("CellListMap")'
       - run: |
           julia --project=docs -e '
             import Pkg; Pkg.add("Documenter")
