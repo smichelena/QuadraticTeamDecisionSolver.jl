@@ -1,7 +1,7 @@
 module QuadraticTeamDecisionSolver
 
 include("quadTeamProblems.jl")
-export QuadTeamProblem, checkProblem, residual, GammaNorm, gammaNorm, cost
+export QuadTeamProblem, checkProblem, checkGamma, residual, GammaNorm, gammaNorm
 
 include("teamMMSE.jl")
 export teamMMSEproblem, generateTeamMMSEsamples, sampleComplexNormal

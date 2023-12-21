@@ -1,20 +1,28 @@
 # General Types and Utility Functions
 
+These types and functions provide basic tools for defining and dealing with static quadratic team problems.
+
 ## Types
+
 ```@docs
 QuadTeamProblem{T<:Number}
-Sample{T<:Number}
 ```
 
 ## Functions
 
 ```@docs
 checkProblem(p::QuadTeamProblem)
-checkSample(p::QuadTeamProblem, s::Sample)
-checkGamma(P::QuadTeamProblem, γ::Vector{<:Function})
-checkData(p::QuadTeamProblem, S::Vector{<:Sample})
-loss(s::Sample, γ::Vector{<:Function})
-risk(S::Vector{<:Sample}, γ::Vector{<:Function})
-splitSampleIntoBlocks(p::QuadTeamProblem, s::Sample)
-splitDataSetIntoBlocks(p::QuadTeamProblem, S::Vector{<:Sample})
+checkGamma(p::QuadTeamProblem, γ::Vector{<:Function})
+residual(
+  m::Int,
+  p::QuadTeamProblem,
+  kernels::Vector{<:Function},
+  γ::Vector{<:Vector{<:Vector}},
+  Y::Vector{<:Vector},
+  Q::Matrix{<:Vector},
+  R::Vector{<:Vector},
+  λ::Vector{<:AbstractFloat},
+ )
+gammaNorm(f::Function, Y::AbstractVector)
+GammaNorm(F::Vector{<:Function}, Y::AbstractVector)
 ```
