@@ -41,7 +41,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: julia-actions/setup-julia@v1
         with:
-          version: '1'
+          version: '1.9.2'
       - run: |
           julia --project=docs -e '
             import Pkg; Pkg.add("Documenter")
@@ -52,8 +52,8 @@ jobs:
           julia --project=docs -e '
             import Pkg; Pkg.add("Documenter")
             using Documenter: doctest
-            using CellListMap
-            doctest(CellListMap)'
+            using QuadraticTeamDecisionSolver
+            doctest(QuadraticTeamDecisionSolver)'
       - run: julia --project=docs docs/make.jl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
