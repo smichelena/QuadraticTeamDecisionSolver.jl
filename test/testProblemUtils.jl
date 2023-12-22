@@ -1,7 +1,7 @@
 using Test
 
-include("../src/types.jl")
-include("../src/problemUtils.jl")
+include("../src/quadTeamProblems.jl")
+
 
 function test_checkProblem()
     # Test case where problem specification is correct
