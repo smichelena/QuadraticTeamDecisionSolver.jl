@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - workflow-fix
     tags: ['*']
   pull_request:
 concurrency:
