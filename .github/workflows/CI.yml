@@ -44,8 +44,11 @@ jobs:
           version: ${{ matrix.version }}
       - run: |
           julia --project=docs -e '
-            import Pkg; Pkg.add("Documenter")
+            import Pkg; 
             using Pkg
+            Pkg.add("Documenter")
+            Pkg.add("DocumenterCitations")
+            Pkg.add("DocumenterTools")
             Pkg.develop(PackageSpec(path=pwd()))
             Pkg.instantiate()'
       - run: |
