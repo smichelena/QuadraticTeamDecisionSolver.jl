@@ -1,5 +1,5 @@
 using Test
-using "testProblemUtils.jl"
+include "testProblemUtils.jl"
 
 @testset "checkProblem tests" begin
     test_checkProblem()
