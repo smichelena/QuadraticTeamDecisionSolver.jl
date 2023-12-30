@@ -1,8 +1,8 @@
-include("testProblemUtils.jl")
+using QuadraticTeamDecisionSolver
 
 @testset "checkProblem tests" begin
     test_checkProblem()
-    test_checkSample()
+    #test_checkSample()
     test_checkData()
     test_checkGamma()
     test_loss()

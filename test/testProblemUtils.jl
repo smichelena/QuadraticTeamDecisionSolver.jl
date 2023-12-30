@@ -1,6 +1,5 @@
 using Test
-
-include("quadProblemUtils.jl")
+using QuadraticTeamDecisionSolver
 
 function test_checkProblem()
     # Test case where problem specification is correct
