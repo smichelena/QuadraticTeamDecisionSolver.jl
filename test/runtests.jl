@@ -1,3 +1,4 @@
+using Test
 using QuadraticTeamDecisionSolver
 
 @testset "checkProblem tests" begin
