@@ -40,7 +40,7 @@ jobs:
       - run: |
           julia --project=docs -e '
             import Pkg; Pkg.add("Documenter")
-            Pkg.develop(PackageSpec(path=pwd()))
+            Pkg.develop(Pkg.PackageSpec(path=pwd()))
             Pkg.instantiate()'
       - run: |
           julia --project=docs -e '

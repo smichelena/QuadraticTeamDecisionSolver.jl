@@ -1,6 +1,6 @@
 using Test
 
-include("../src/quadTeamProblems.jl")
+include("quadProblemUtils.jl")
 
 function test_checkProblem()
     # Test case where problem specification is correct
