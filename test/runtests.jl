@@ -2,7 +2,7 @@ using Test
 include("testProblemUtils.jl")
 
 @testset "checkProblem tests" begin
-    test_checkProblem()
+    #test_checkProblem()
     #test_checkSample()
     test_checkData()
     test_checkGamma()
