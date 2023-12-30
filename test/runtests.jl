@@ -1,5 +1,5 @@
 using Test
-using QuadraticTeamDecisionSolver
+using "testProblemUtils.jl"
 
 @testset "checkProblem tests" begin
     test_checkProblem()
