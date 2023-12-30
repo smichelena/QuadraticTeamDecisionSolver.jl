@@ -39,11 +39,11 @@ jobs:
             - '1.9' 
           arch: x64
       - run: |
-          julia --project=docs -e '
+          julia --project=. -e '
             using Documenter, DocumenterCitations, DocumenterTools
             using CellListMap
             Documenter.doctest(CellListMap)'
-      - run: julia --project=docs docs/make.jl
+      - run: julia --project=. docs/make.jl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
