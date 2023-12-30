@@ -2,7 +2,7 @@ name: CI
 on:
   push:
     branches:
-      - workflow-fix
+      - main
     tags: ['*']
   pull_request:
 jobs:
