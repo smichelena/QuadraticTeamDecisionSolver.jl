@@ -35,14 +35,9 @@ jobs:
       - uses: actions/checkout@v3
       - uses: julia-actions/setup-julia@v1
         with:
-          version: '1.9' # Specify the version if matrix is not used
-          arch: x64 # Specify the arch if matrix is not used
-      - run: |
-          julia --project=docs -e '
-            using Pkg
-            Pkg.develop(PackageSpec(path=pwd()))
-            Pkg.add(["Documenter", "DocumenterCitations", "DocumenterTools", "CellListMap"])
-            Pkg.instantiate()'
+          version: 
+            - '1.9' 
+          arch: x64
       - run: |
           julia --project=docs -e '
             using Documenter, DocumenterCitations, DocumenterTools
