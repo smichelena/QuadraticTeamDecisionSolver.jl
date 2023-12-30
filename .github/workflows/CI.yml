@@ -2,7 +2,7 @@ name: CI
 on:
   push:
     branches:
-      - workflow-fix
+      - main
     tags: ['*']
   pull_request:
 jobs:
@@ -39,14 +39,15 @@ jobs:
           arch: x64 # Specify the arch if matrix is not used
       - run: |
           julia --project=docs -e '
-            import Pkg; Pkg.add("Documenter")
-            Pkg.develop(Pkg.PackageSpec(path=pwd()))
+            using Pkg
+            Pkg.develop(PackageSpec(path=pwd()))
+            Pkg.add(["Documenter", "DocumenterCitations", "DocumenterTools", "CellListMap"])
             Pkg.instantiate()'
       - run: |
           julia --project=docs -e '
-            using Documenter: doctest
+            using Documenter, DocumenterCitations, DocumenterTools
             using CellListMap
-            doctest(CellListMap)'
+            Documenter.doctest(CellListMap)'
       - run: julia --project=docs docs/make.jl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
