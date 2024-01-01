@@ -1,7 +1,5 @@
 using Test
-
-include("../src/types.jl")
-include("../src/problemUtils.jl")
+using QuadraticTeamDecisionSolver
 
 function test_checkProblem()
     # Test case where problem specification is correct

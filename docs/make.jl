@@ -1,6 +1,6 @@
 using QuadraticTeamDecisionSolver
-using DocumenterCitations
 using Documenter
+using DocumenterCitations
 using Pkg
 
 PROJECT_TOML = Pkg.TOML.parsefile(joinpath(@__DIR__, "..", "Project.toml"))
@@ -21,7 +21,7 @@ makedocs(
         prettyurls=true,
         canonical="https://smichelena.github.io/QuadraticTeamDecisionSolver.jl/",
         assets=String["assets/citations.css"],
-        footer="[$NAME.jl]($GITHUB) v$VERSION docs powered by [Documenter.jl](https://github.com/JuliaDocs/Documenter.jl)."
+        footer="[$NAME.jl]($GITHUB) v$PKG_VERSION docs powered by [Documenter.jl](https://github.com/JuliaDocs/Documenter.jl)."
     ),
 	pages = [
 		"Home" => "index.md",
