@@ -1,0 +1,24 @@
+name: Documenter
+on:
+  push:
+    branches: main
+    tags: [v*]
+  pull_request:
+
+jobs:
+  Documenter:
+    permissions:
+      contents: write
+      statuses: write
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: julia-actions/setup-julia@v1
+        with:
+            version: '1.9'
+      - uses: actions/checkout@v3
+      - uses: julia-actions/julia-buildpkg@v1  # if package requires Pkg.build()
+      - run: julia --project=docs/ -e 'import Pkg; Pkg.add(["Documenter", "DocumenterCitations"])' 
+      - uses: julia-actions/julia-docdeploy@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

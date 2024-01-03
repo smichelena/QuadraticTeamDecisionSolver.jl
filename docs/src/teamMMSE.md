@@ -16,7 +16,7 @@ The random variable
 \mathbf{H} = [\mathbf{H}_1, \dots, \mathbf{H}_N]
 ```
 
-is called the **channel** and is centrally symmetric complex gaussian with realizations in ``\mathbb{C}^{K,LN}`` and arbitrary covariance.
+is called the **channel** and is centrally symmetric complex gaussian with realizations in ``\mathbb{C}^{K, LN}`` and arbitrary covariance.
 
 For each transmitter (agent) ``i \in \{1,\dots, N\}`` , the measurement random vector ``\mathbf{Y}_i`` is given by
 
