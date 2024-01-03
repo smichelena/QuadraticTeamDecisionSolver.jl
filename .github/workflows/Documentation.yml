@@ -18,7 +18,10 @@ jobs:
             version: '1.9'
       - uses: actions/checkout@v3
       - uses: julia-actions/julia-buildpkg@v1  # if package requires Pkg.build()
-      - run: julia --project=docs/ -e 'import Pkg; Pkg.add(["Documenter", "DocumenterCitations"])' 
+      - name: Install Dependencies
+        run: julia --project=docs/ -e 'import Pkg; Pkg.add(["Documenter", "DocumenterCitations"])' 
       - uses: julia-actions/julia-docdeploy@v1
+      - name: Build and Deploy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: julia --project=docs/ docs/make.jl
