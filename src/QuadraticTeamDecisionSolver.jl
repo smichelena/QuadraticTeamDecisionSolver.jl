@@ -1,15 +1,15 @@
 module QuadraticTeamDecisionSolver
 
 include("quadTeamProblems.jl")
-export QuadTeamProblem, checkProblem, checkGamma, residual, GammaNorm, gammaNorm
+export QuadTeamProblem, checkProblem, checkGamma, residual, GammaNorm, gammaNorm, reformatData
 
 include("teamMMSE.jl")
 export teamMMSEproblem, generateTeamMMSEsamples, sampleComplexNormal
 
 include("fixedPointSolvers.jl")
-export jacobiSolver, gaussSeidelSolver, SORSolver
+export jacobiSolver, gaussSeidelSolver, SORSolver, solverPreprocessing, optimizedGaussSeidel
 
 include("kernelMethods.jl")
 export exponentialKernel,
-	matrixExponentialKernel, gramian, kernelNorm, kernelFunction, kernelRegression
+	matrixExponentialKernel, gramian, covariance, kernelNorm, kernelFunction, kernelRegression
 end

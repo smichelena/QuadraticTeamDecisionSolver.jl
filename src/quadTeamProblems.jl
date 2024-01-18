@@ -193,9 +193,18 @@ function GammaNorm(F::Vector{<:Function}, Y::AbstractVector)
 	return sqrt(sum([gammaNorm(f, y) for (f, y) in zip(F, Y)]))
 end
 
+"""
+	reformatData(Y_data::Vector{<:Vector}, Q_data::Matrix{<:Vector}, R_Data::Vector{<:Vector})
 
-function cost(p::QuadTeamProblem, F::Vector{<:Function}, Y::Vector{<:Vector}, Q::Matrix{<:Vector}, R::Vector{<:Vector}, c::Vector{<:AbstractFloat})
-	g = [F[i].(Y[i]) for i in 1:p.N]
-	loss = [dot.(g[i], Q[i, j], g[j]) + 2 * real(dot.(g[i], R[i])) .+ c[i] for j in 1:p.N, i in 1:p.N]
-	return real(mean(vcat(loss...)))
+Reformat data to efficient data structure
+"""
+function reformatData(Y_data::Vector{<:Vector}, Q_data::Matrix{<:Vector}, R_Data::Vector{<:Vector})
+    Y = [vcat(vec.(Y_data[i])...) for i in eachindex(Y_data)]
+    R = [vcat(vec.(R_data[i])...) for i in eachindex(R_data)]
+    Q   = [
+        i == j ? vcat(Q_data[i, j]...) : BlockDiagonal(Q_data[i, j]) for
+        i in axes(Q_data, 1), j in axes(Q_data, 2)
+    ]
+    return Y, Q, R
 end
+

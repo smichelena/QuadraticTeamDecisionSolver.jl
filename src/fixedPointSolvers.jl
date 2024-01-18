@@ -223,3 +223,88 @@ function SORSolver(
 	return (1 / omega) * γ
 
 end
+
+
+"""
+	solverPreprocessing(
+		Y::Vector{<:Vector},
+		Q::Matrix{<:AbstractMatrix},
+		λ::Vector{Float64},
+		kernels::Vector{<:Function},
+		L::Int,
+		K::Int,
+		N::Int,
+		S::Int,
+	)
+
+	Assemble gramians/covariances and pre factorize everything for solver. 
+"""
+function solverPreprocessing(
+	Y::Vector{<:Vector},
+	Q::Matrix{<:AbstractMatrix},
+	λ::Vector{Float64},
+	kernels::Vector{<:Function},
+	L::Int,
+	K::Int,
+	N::Int,
+	S::Int,
+)
+	m   = Int(ceil(S / 2))
+	n   = L * N * K
+	Y_o = [[Y[i][l:(l+n-1)] for l in 1:n:n*m] for i in eachindex(Y)]
+	Y_p = [[Y[i][l:(l+n-1)] for l in m*n:n:(length(Y[i])-n)] for i in eachindex(Y)]
+	G_o = [covariance(kernels[i], Y_o[i], Y_o[i]) for i in eachindex(Y_data)]
+	G_p = [covariance(kernels[i], Y_o[i], Y_p[i]) for i in eachindex(Y_data)]
+	C   = [cholesky(G_o[i] + λ[i] * I) for i in eachindex(G_o)]
+	D   = [G_p[i] * (C[i] \ Q[i, i]) for i in axes(Q_data, 1)]
+	Q_f = deepcopy(Q)
+	for i in axes(Q_data, 1)
+		Q_f[i, i] =
+			BlockDiagonal([D[i][l:(l+L-1), :] for l in 1:L:size(D[1], 1)])
+	end
+	return G_o, G_p, C, Q_f
+end
+
+"""
+	optimizedGaussSeidel(
+		G_p::Vector{<:Matrix},
+		C::Vector,
+		Q::Matrix{<:AbstractMatrix},
+		R::Vector{<:Vector};
+		iterations = 10,
+	)
+
+Implements a much faster version of the Gauss Seidel solver that uses better data structures and pre factorized gramians.
+
+Other methods can be implemented by using the function `solverPreprocessing` and simply changing the inner loop of this function.
+
+"""
+function optimizedGaussSeidel(
+	G_p::Vector{<:Matrix},
+	C::Vector,
+	Q::Matrix{<:AbstractMatrix},
+	R::Vector{<:Vector};
+	iterations = 10,
+)
+	g = [[zeros(ComplexF64, size(G_p[1], 1))] for _ in eachindex(R)]
+	for _ in 1:iterations
+		for i in eachindex(R)
+			append!(
+				g[i],
+				[
+					-Q[i, i] \ (
+						G_p[i] * (
+							C[i] \ (
+								sum([
+									Q[i, j] * g[j][end] for
+									j in setdiff(eachindex(R), i)
+								]) + R[i]
+							)
+						)
+					),
+				],
+			)
+		end
+	end
+	return g
+end
