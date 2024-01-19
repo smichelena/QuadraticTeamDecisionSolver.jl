@@ -198,7 +198,7 @@ end
 
 Reformat data to efficient data structure
 """
-function reformatData(Y_data::Vector{<:Vector}, Q_data::Matrix{<:Vector}, R_Data::Vector{<:Vector})
+function reformatData(Y_data::Vector{<:Vector}, Q_data::Matrix{<:Vector}, R_data::Vector{<:Vector})
     Y = [vcat(vec.(Y_data[i])...) for i in eachindex(Y_data)]
     R = [vcat(vec.(R_data[i])...) for i in eachindex(R_data)]
     Q   = [
