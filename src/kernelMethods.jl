@@ -57,12 +57,28 @@ end
 Compute the gramian of a kernel ``K`` over the samples ``\\mathbf{X}^n \\subset \\mathcal{X}``.
 
 # Arguments:
-- `kernel::Function`: A positive definite kernel function.
+- `kernel::Function`: A scalar or matrix kernel function.
 - `X::Vector{<:Vector}`: The samples over which the gramian is to be constructed.
 
 """
 function gramian(kernel::Function, X::AbstractVector)
 	return [kernel(x, y) for x in X, y in X]
+end
+
+"""
+	covariance(kernel::Function, X_o::AbstractVector, X_p::AbstractVector)
+
+Compute the covariance of sample sets ``X_o`` and ``X_p`` using the kernel ``K``.
+
+# Arguments:
+- `kernel::Function`: A scalar or matrix kernel function.
+- `X_o::Vector{<:Vector}`: Observation samples.
+- `X_p::Vector{<:Vector}`: Prediction samples.
+
+"""
+function covariance(kernel::Function, X_o::AbstractVector, X_p::AbstractVector)
+    G = [kernel(x, y) for x in X_o, y in X_p]
+    return hvcat((size(G, 1)), G...)
 end
 
 """
