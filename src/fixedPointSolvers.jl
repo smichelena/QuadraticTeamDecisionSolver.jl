@@ -253,12 +253,12 @@ function solverPreprocessing(
 	n   = L * N * K
 	Y_o = [[Y[i][l:(l+n-1)] for l in 1:n:n*m] for i in eachindex(Y)]
 	Y_p = [[Y[i][l:(l+n-1)] for l in m*n:n:(length(Y[i])-n)] for i in eachindex(Y)]
-	G_o = [covariance(kernels[i], Y_o[i], Y_o[i]) for i in eachindex(Y_data)]
-	G_p = [covariance(kernels[i], Y_o[i], Y_p[i]) for i in eachindex(Y_data)]
+	G_o = [covariance(kernels[i], Y_o[i], Y_o[i]) for i in eachindex(Y_o)]
+	G_p = [covariance(kernels[i], Y_o[i], Y_p[i]) for i in eachindex(Y_p)]
 	C   = [cholesky(G_o[i] + λ[i] * I) for i in eachindex(G_o)]
-	D   = [G_p[i] * (C[i] \ Q[i, i]) for i in axes(Q_data, 1)]
+	D   = [G_p[i] * (C[i] \ Q[i, i]) for i in axes(Q, 1)]
 	Q_f = deepcopy(Q)
-	for i in axes(Q_data, 1)
+	for i in axes(Q, 1)
 		Q_f[i, i] =
 			BlockDiagonal([D[i][l:(l+L-1), :] for l in 1:L:size(D[1], 1)])
 	end
@@ -269,7 +269,7 @@ end
 	optimizedGaussSeidel(
 		G_p::Vector{<:Matrix},
 		C::Vector,
-		Q::Matrix{<:AbstractMatrix},
+		Q_f::Matrix{<:AbstractMatrix},
 		R::Vector{<:Vector};
 		iterations = 10,
 	)
@@ -282,7 +282,7 @@ Other methods can be implemented by using the function `solverPreprocessing` and
 function optimizedGaussSeidel(
 	G_p::Vector{<:Matrix},
 	C::Vector,
-	Q::Matrix{<:AbstractMatrix},
+	Q_f::Matrix{<:AbstractMatrix},
 	R::Vector{<:Vector};
 	iterations = 10,
 )
@@ -292,11 +292,11 @@ function optimizedGaussSeidel(
 			append!(
 				g[i],
 				[
-					-Q[i, i] \ (
+					-Q_f[i, i] \ (
 						G_p[i] * (
 							C[i] \ (
 								sum([
-									Q[i, j] * g[j][end] for
+									Q_f[i, j] * g[j][end] for
 									j in setdiff(eachindex(R), i)
 								]) + R[i]
 							)

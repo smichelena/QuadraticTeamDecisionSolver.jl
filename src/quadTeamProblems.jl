@@ -193,6 +193,8 @@ function GammaNorm(F::Vector{<:Function}, Y::AbstractVector)
 	return sqrt(sum([gammaNorm(f, y) for (f, y) in zip(F, Y)]))
 end
 
+using BlockDiagonals
+
 """
 	reformatData(Y_data::Vector{<:Vector}, Q_data::Matrix{<:Vector}, R_Data::Vector{<:Vector})
 
